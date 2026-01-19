@@ -1,69 +1,116 @@
+'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UserX, Mail } from "lucide-react";
+import { UserX, Mail, ShieldAlert, Trash2, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function DataDeletionPage() {
   const supportEmail = "soporte@miboletoni.com";
 
+  // Animaciones
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="container py-12 md:py-20">
-      <div className="max-w-3xl mx-auto">
-        <Card className="shadow-lg">
-          <CardHeader className="text-center">
-            <UserX className="mx-auto h-12 w-12 text-destructive mb-4" />
-            <CardTitle className="font-headline text-3xl md:text-4xl">
-              Solicitud de Eliminación de Datos
-            </CardTitle>
-            <p className="text-muted-foreground pt-2">
-              Instrucciones para eliminar tu cuenta y los datos asociados.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="prose dark:prose-invert max-w-none text-justify">
-              <p>
-                Entendemos y respetamos tu derecho a la privacidad y al control sobre tu información personal. Si has utilizado nuestros servicios a través de inicio de sesión con Facebook o cualquier otro método, puedes solicitar la eliminación completa de tus datos de nuestros sistemas.
-              </p>
-
-              <h3 className="font-headline">¿Qué datos se eliminarán?</h3>
-              <p>
-                Al procesar tu solicitud, se eliminará permanentemente la siguiente información:
-              </p>
-              <ul>
-                <li>Tu perfil de usuario (nombre, correo electrónico, teléfono).</li>
-                <li>Tu historial de compras y boletos asociados a tu cuenta.</li>
-                <li>Cualquier otra información personal que hayamos recopilado durante tu uso de la plataforma.</li>
-              </ul>
-              <p>
-                Esta acción no se puede deshacer.
-              </p>
-
-              <h3 className="font-headline">¿Cómo solicitar la eliminación?</h3>
-               <Alert>
-                <Mail className="h-4 w-4" />
-                <AlertTitle>Paso a paso</AlertTitle>
-                <AlertDescription>
-                  <ol className="list-decimal list-inside space-y-2 mt-2">
-                    <li>
-                      Envía un correo electrónico a nuestra dirección de soporte: <strong className="text-primary">{supportEmail}</strong>.
-                    </li>
-                    <li>
-                      Usa el asunto: <strong className="text-primary">"Solicitud de Eliminación de Datos"</strong>.
-                    </li>
-                    <li>
-                      En el cuerpo del correo, por favor incluye el <strong>nombre y correo electrónico</strong> con el que te registraste en nuestra plataforma para que podamos identificarte.
-                    </li>
-                  </ol>
-                </AlertDescription>
-              </Alert>
-
-              <h3 className="font-headline">Proceso y Plazos</h3>
-              <p>
-                Una vez recibida tu solicitud, nuestro equipo verificará tu identidad y procederá con la eliminación de tus datos en un plazo máximo de 14 días hábiles. Te enviaremos una confirmación por correo electrónico una vez que el proceso se haya completado.
-              </p>
+    <div className="min-h-screen bg-muted/20 py-16 md:py-24">
+      <div className="container max-w-3xl mx-auto">
+        
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+        >
+            <Card className="shadow-xl border-muted/60 overflow-hidden">
+            {/* Header con gradiente suave */}
+            <div className="bg-gradient-to-r from-red-50 to-background border-b p-8 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                    <UserX className="h-8 w-8 text-red-600" />
+                </div>
+                <h1 className="font-headline text-3xl md:text-4xl font-bold text-foreground">
+                    Solicitud de Eliminación de Datos
+                </h1>
+                <p className="text-muted-foreground mt-2 max-w-lg mx-auto">
+                    Tu privacidad es tuya. Aquí te explicamos cómo ejercer tu derecho al olvido digital en nuestra plataforma.
+                </p>
             </div>
-          </CardContent>
-        </Card>
+
+            <CardContent className="p-8 md:p-10 space-y-10">
+                {/* Introducción */}
+                <div className="prose dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
+                    <p>
+                        Si has utilizado nuestros servicios (vía Facebook Login, Google o registro directo), tienes derecho a solicitar la eliminación total de tu huella digital en nuestros servidores.
+                    </p>
+                </div>
+
+                <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+                    
+                    {/* Sección: Qué se borra */}
+                    <motion.div variants={item} className="bg-background border rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            <h3 className="font-headline text-lg font-bold">¿Qué datos eliminaremos permanentemente?</h3>
+                        </div>
+                        <ul className="space-y-2 ml-2">
+                            {["Tu perfil completo (nombre, email, foto).", "Historial de compras y boletos pasados.", "Logs de acceso y preferencias guardadas."].map((point, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 shrink-0" />
+                                    {point}
+                                </li>
+                            ))}
+                        </ul>
+                    </motion.div>
+
+                    {/* Sección: Pasos (Diseño Visual) */}
+                    <motion.div variants={item}>
+                        <h3 className="font-headline text-xl font-bold mb-6 flex items-center gap-2">
+                            <Mail className="w-5 h-5 text-primary" />
+                            Cómo solicitarlo en 3 pasos
+                        </h3>
+                        
+                        <div className="grid gap-4 md:grid-cols-3">
+                            {[
+                                { title: "1. Redacta", desc: "Abre tu correo y escribe un nuevo mensaje.", icon: "✏️" },
+                                { title: "2. Destinatario", desc: `Envía a: ${supportEmail}`, icon: "📧" },
+                                { title: "3. Asunto", desc: 'Pon: "Solicitud de Eliminación de Datos"', icon: "🏷️" }
+                            ].map((step, i) => (
+                                <div key={i} className="bg-primary/5 p-4 rounded-lg border border-primary/10 text-center">
+                                    <div className="text-2xl mb-2">{step.icon}</div>
+                                    <div className="font-bold text-sm mb-1">{step.title}</div>
+                                    <div className="text-xs text-muted-foreground break-words">{step.desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/10 p-4 rounded-lg border border-yellow-200 dark:border-yellow-900/30 flex gap-3 items-start">
+                            <ShieldAlert className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+                            <p className="text-sm text-yellow-700 dark:text-yellow-500">
+                                <strong>Importante:</strong> Envía el correo desde la misma dirección que registraste en MiBoletoNi para verificar tu identidad.
+                            </p>
+                        </div>
+                    </motion.div>
+
+                    {/* Sección: Tiempos */}
+                    <motion.div variants={item} className="flex items-start gap-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-lg">
+                        <CheckCircle2 className="w-6 h-6 text-green-600 mt-1" />
+                        <div>
+                            <h4 className="font-bold text-green-700 dark:text-green-500 text-sm">Proceso y Garantía</h4>
+                            <p className="text-sm text-green-600/80 dark:text-green-400 mt-1">
+                                Procesaremos tu solicitud en un máximo de <strong>14 días hábiles</strong>. Recibirás una confirmación final cuando tus datos hayan sido purgados de nuestros sistemas.
+                            </p>
+                        </div>
+                    </motion.div>
+
+                </motion.div>
+            </CardContent>
+            </Card>
+        </motion.div>
       </div>
     </div>
   );
