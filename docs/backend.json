@@ -1,0 +1,199 @@
+
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "type": "object",
+      "description": "Almacena la información principal de un evento (el 'qué', 'quién', 'cómo').",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nombre principal del evento. Ej: 'Concierto de Verano'."
+        },
+        "category": {
+          "type": "string",
+          "description": "Categoría predefinida. Ej: 'Conciertos y Festivales', 'Teatro'."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción detallada del evento."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL de la imagen principal/banner del evento."
+        }
+      },
+      "required": ["name", "category"]
+    },
+    "Venue": {
+      "title": "Venue",
+      "type": "object",
+      "description": "Define los recintos o lugares donde ocurren los eventos.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nombre del recinto. Ej: 'Estadio Soberanía'."
+        },
+        "city": {
+          "type": "string",
+          "description": "Ciudad donde se ubica el recinto."
+        },
+        "seatMapImageUrl": {
+          "type": "string",
+          "description": "URL del plano estático del recinto."
+        },
+        "type": {
+          "type": "string",
+          "description": "Tipo de venta. Valores: 'general' o 'numbered'.",
+          "enum": ["general", "numbered"]
+        }
+      },
+      "required": ["name", "city", "type"]
+    },
+    "Presentation": {
+      "title": "Presentation",
+      "type": "object",
+      "description": "Define la instancia específica de un evento (el 'cuándo' y 'dónde').",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "description": "ID del documento de la colección 'events'."
+        },
+        "venueId": {
+          "type": "string",
+          "description": "ID del documento de la colección 'venues'."
+        },
+        "eventDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora de esta presentación."
+        },
+        "status": { 
+          "type": "string", 
+          "enum": ["A la venta", "Pospuesto", "Agotado", "Cancelado"],
+          "description": "Estado de la venta de boletos para la presentación."
+        }
+      },
+      "required": ["eventId", "venueId", "eventDate", "status"]
+    },
+    "PricingTier": {
+        "title": "PricingTier",
+        "type": "object",
+        "description": "Define las localidades y precios para recintos de tipo 'general'.",
+        "properties": {
+            "name": { "type": "string", "description": "Nombre de la localidad. Ej: 'Gradas'." },
+            "price": { "type": "number" },
+            "currency": { "type": "string", "enum": ["NIO", "USD"] },
+            "capacity": { "type": "number", "description": "Cantidad total de boletos para esta localidad." },
+            "sold": { "type": "number", "description": "Cantidad de boletos vendidos." }
+        },
+        "required": ["name", "price", "currency", "capacity", "sold"]
+    },
+    "Seat": {
+        "title": "Seat",
+        "type": "object",
+        "description": "Define cada asiento individual para recintos de tipo 'numbered'.",
+        "properties": {
+            "section": { "type": "string", "description": "Ej: 'Platea Izquierda'." },
+            "row": { "type": "string", "description": "Ej: 'A'." },
+            "number": { "type": "string", "description": "Ej: '10'." },
+            "price": { "type": "number" },
+            "currency": { "type": "string", "enum": ["NIO", "USD"] },
+            "status": { "type": "string", "enum": ["available", "sold", "reserved"] },
+            "reservaExpiracion": { "type": "string", "format": "date-time", "description": "Timestamp de cuando la reserva expira. Nulo si no está reservado." },
+            "reservaSesionId": { "type": "string", "description": "ID del usuario o sesión que tiene el asiento reservado." }
+        },
+        "required": ["section", "row", "number", "price", "currency", "status"]
+    },
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Guarda información de los usuarios registrados.",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email del usuario."
+        },
+        "role": {
+          "type": "string",
+          "description": "Rol del usuario. Ej: 'admin' o 'regular'.",
+          "enum": ["admin", "regular"]
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "type": "object",
+      "description": "Almacena el registro de cada compra exitosa.",
+      "properties": {
+        "userId": { "type": "string", "description": "ID del usuario que realizó la compra." },
+        "presentationId": { "type": "string", "description": "ID de la presentación comprada." },
+        "totalPrice": { "type": "number" },
+        "currency": { "type": "string", "enum": ["NIO", "USD"] },
+        "purchaseDate": { "type": "string", "format": "date-time" },
+        "tickets": {
+            "type": "array",
+            "description": "Un array de objetos, uno por cada boleto comprado.",
+            "items": { "type": "object" }
+        }
+      },
+      "required": ["userId", "presentationId", "totalPrice", "currency", "purchaseDate", "tickets"]
+    },
+    "NewsletterSubscriber": {
+      "title": "Newsletter Subscriber",
+      "type": "object",
+      "description": "Stores email addresses of users who subscribed to the newsletter.",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The subscriber's email address."
+        },
+        "subscribedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the user subscribed."
+        }
+      },
+      "required": ["email", "subscribedAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "google.com", "facebook.com"]
+  },
+  "firestore": {
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Colección principal de eventos."
+    },
+    "/venues/{venueId}": {
+      "schema": { "$ref": "#/entities/Venue" },
+      "description": "Colección de recintos y lugares."
+    },
+    "/presentations/{presentationId}": {
+      "schema": { "$ref": "#/entities/Presentation" },
+      "description": "Colección de presentaciones específicas de un evento."
+    },
+    "/presentations/{presentationId}/pricingtiers/{tierId}": {
+      "schema": { "$ref": "#/entities/PricingTier" },
+      "description": "Sub-colección para localidades en recintos de admisión general."
+    },
+    "/presentations/{presentationId}/seats/{seatId}": {
+      "schema": { "$ref": "#/entities/Seat" },
+      "description": "Sub-colección para asientos en recintos numerados."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Colección de perfiles de usuario."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Colección raíz para todas las órdenes de compra."
+    },
+    "/newsletterSubscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Collection of newsletter subscribers."
+    }
+  }
+}

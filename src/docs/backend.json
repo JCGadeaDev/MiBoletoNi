@@ -1,0 +1,166 @@
+
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the MiBoletoNic platform.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role within the platform. This is the source of truth for the custom claim.",
+          "enum": ["admin", "regular"]
+        },
+        "phone": {
+            "type": "string",
+            "description": "The user's phone number."
+        },
+        "promotionsAccepted": {
+            "type": "boolean",
+            "description": "Indicates if the user accepts promotional emails."
+        },
+        "termsAccepted": {
+            "type": "boolean",
+            "description": "Indicates if the user accepted terms and conditions."
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "role",
+        "termsAccepted",
+        "phone"
+      ]
+    },
+    "Event": {
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event for which tickets are sold.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the event."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date and time of the event in ISO 8601 format.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "The location or venue where the event is held."
+        },
+        "venue": {
+          "type": "string",
+          "description": "The name of the venue."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The maximum number of attendees allowed for the event."
+        },
+        "ticketPrice": {
+          "type": "number",
+          "description": "The price of a single ticket for the event."
+        },
+        "image": {
+          "type": "string",
+          "description": "Placeholder ID for the event image."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the event."
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "date",
+        "location",
+        "venue",
+        "capacity",
+        "ticketPrice",
+        "image",
+        "category"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed by a user for an event.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Order)"
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N Order)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The number of tickets purchased in the order."
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "The total price of the order."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "The status of the payment.",
+          "enum": ["completed", "pending", "failed", "refunded"]
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "The transaction ID from the payment gateway."
+        }
+      },
+      "required": [
+        "userId",
+        "eventId",
+        "quantity",
+        "totalPrice",
+        "paymentStatus"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "google.com",
+      "facebook.com"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user information and roles. Uses path-based ownership for user-specific data."
+    },
+    "/events/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/Event"
+      },
+      "description": "Stores event details."
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/Order"
+      },
+      "description": "Stores order history for each user. Accessible only by the user and admins."
+    }
+  }
+}

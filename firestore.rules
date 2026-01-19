@@ -1,0 +1,98 @@
+/**
+ * @fileoverview Firestore Security Rules for the ticketing app.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Funciones de Ayuda ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Verifica el custom claim 'role'
+      return request.auth.token.role == 'admin';
+    }
+
+    // --- Reglas de Colecciones Públicas (Admin Write / Public Read) ---
+
+    match /events/{eventId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /venues/{venueId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /presentations/{presentationId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- Subcolecciones de Presentaciones ---
+
+    match /presentations/{presentationId}/pricingtiers/{tierId} {
+      // Lectura: Usuarios verificados O Admins
+      allow get, list: if (isSignedIn() && isEmailVerified()) || isAdmin();
+      // Escritura: Solo Admin
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /presentations/{presentationId}/seats/{seatId} {
+      // Lectura: Usuarios verificados O Admins
+      allow get, list: if (isSignedIn() && isEmailVerified()) || isAdmin();
+      // Escritura: Solo Admin
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- Colecciones de Usuario ---
+
+    match /users/{userId} {
+      // Admin puede ver cualquier perfil, usuario solo el suyo
+      allow get: if isOwner(userId) || isAdmin();
+      // Solo admin puede listar usuarios
+      allow list: if isAdmin();
+      
+      // Creación/Edición restringida al propietario
+      allow create: if isOwner(userId) && request.resource.data.email == request.auth.token.email && request.resource.data.role == 'regular';
+      allow update: if isExistingOwner(userId) && request.resource.data.email == resource.data.email && request.resource.data.role == resource.data.role;
+      allow delete: if isExistingOwner(userId);
+
+      // Regla explícita para subcolección 'orders' dentro del usuario
+      match /orders/{orderId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isAdmin() || isOwner(userId); // TicketService usa admin SDK, pero si el cliente necesita crear... no debería.
+        // Pero TicketService corre en servidor, así que "Admin SDK" ignora reglas.
+        // El cliente lee usando useCollection.
+      }
+    }
+
+    match /orders/{orderId} {
+      // Admin puede ver cualquier orden. Usuario solo la suya (verificada o no, para evitar bloqueos)
+      allow get, list: if isSignedIn() && (isAdmin() || isOwner(resource.data.userId));
+      
+      // Creación solo para usuario verificado
+      allow create: if isSignedIn() && isEmailVerified() && request.resource.data.userId == request.auth.uid;
+      
+      // Nadie edita ni borra órdenes
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

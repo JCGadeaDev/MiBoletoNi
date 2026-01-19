@@ -1,0 +1,124 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "A vibrant concert with a large crowd and colorful lights.",
+      "imageUrl": "https://images.unsplash.com/photo-1594979421735-d259c49ea79a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx0aGVhdGVyJTIwc3RhZ2UlMjBsaWdodHN8ZW58MHx8fHwxNzA3ODc0NjYwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "theater lights"
+    },
+    {
+      "id": "event-1",
+      "description": "A rock band performing on stage.",
+      "imageUrl": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjb25jZXJ0JTIwY3Jvd2R8ZW58MHx8fHwxNzYwNDM0NjIwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "concert crowd"
+    },
+    {
+      "id": "event-2",
+      "description": "A theater play with actors in costume.",
+      "imageUrl": "https://images.unsplash.com/photo-1740867650660-e1a0a677e666?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx0aGVhdGVyJTIwcGxheXxlbnwwfHx8fDE3NTk2ODIzMzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "theater play"
+    },
+    {
+      "id": "event-3",
+      "description": "A baseball game in a stadium.",
+      "imageUrl": "https://images.unsplash.com/photo-1474225349448-b36696c95008?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YmFzZWJhbGwlMjBnYW1lfGVufDB8fHx8MTc1OTc0NTUyMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "baseball game"
+    },
+    {
+      "id": "event-4",
+      "description": "A music festival with a large crowd.",
+      "imageUrl": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtdXNpYyUyMGZlc3RpdmFsfGVufDB8fHx8MTc1OTY5ODczOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "music festival"
+    },
+    {
+      "id": "event-5",
+      "description": "A cultural dance performance.",
+      "imageUrl": "https://images.unsplash.com/photo-1709614503171-c18df73d4078?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjdWx0dXJhbCUyMGRhbmNlfGVufDB8fHx8MTc1OTY3NTQ0MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cultural dance"
+    },
+    {
+      "id": "event-6",
+      "description": "A stand-up comedy show.",
+      "imageUrl": "https://images.unsplash.com/photo-1611956425642-d5a8169abd63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdGFuZHVwJTIwY29tZWR5fGVufDB8fHx8MTc1OTcyMDcxM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "standup comedy"
+    },
+    {
+      "id": "event-7",
+      "description": "A classical guitar concert.",
+      "imageUrl": "https://images.unsplash.com/photo-1521012012903-01a21393a521?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjbGFzc2ljYWwlMjBndWl0YXJ8ZW58MHx8fHwxNzU5NzQ2NzY1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "classical guitar"
+    },
+    {
+      "id": "event-8",
+      "description": "A food festival.",
+      "imageUrl": "https://images.unsplash.com/photo-1515942349791-7f617f1a3a41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxmb29kJTIwZmVzdGl2YWx8ZW58MHx8fHwxNzU5Njk4NzM4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "food festival"
+    },
+    {
+      "id": "blog-1",
+      "description": "A guide to the best concerts in Nicaragua.",
+      "imageUrl": "https://images.unsplash.com/photo-1735368315970-284d0a6b8825?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjb25jZXJ0JTIwZ3VpZGV8ZW58MHx8fHwxNzU5NzQ2NzY2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "concert guide"
+    },
+    {
+      "id": "blog-2",
+      "description": "An interview with a local artist.",
+      "imageUrl": "https://images.unsplash.com/photo-1637761566180-9dbde4fdab77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhcnRpc3QlMjBpbnRlcnZpZXd8ZW58MHx8fHwxNzU5Njk1NzU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "artist interview"
+    },
+    {
+      "id": "blog-3",
+      "description": "What to do this weekend in Granada.",
+      "imageUrl": "https://images.unsplash.com/photo-1721244653529-8684921faaa7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjaXR5JTIwZ3VpZGV8ZW58MHx8fHwxNzU5NzQ2NzY1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "city guide"
+    },
+    {
+      "id": "organizer-hero",
+      "description": "An event organizer managing an event.",
+      "imageUrl": "https://images.unsplash.com/photo-1620735691646-84f8e52db125?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxldmVudCUyMG9yZ2FuaXplcnxlbnwwfHx8fDE3NTk2NjUwMTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "event organizer"
+    },
+    {
+      "id": "seat-map",
+      "description": "A map of seats in a venue.",
+      "imageUrl": "https://images.unsplash.com/photo-1731854428310-5894cb2054b2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzZWF0JTIwbWFwfGVufDB8fHx8MTc1OTc0Njc2NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "seat map"
+    },
+    {
+      "id": "dashboard-hero",
+      "description": "QR code on a phone screen for event entry",
+      "imageUrl": "https://images.unsplash.com/photo-1706759755782-62bc9a0b32e1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGhvbmUlMjBxcnxlbnwwfHx8fDE3NTk3NDY3NjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "phone qr"
+    },
+    {
+      "id": "sponsor-placeholder",
+      "description": "Placeholder for a sponsor logo",
+      "imageUrl": "https://picsum.photos/seed/sponsor/300/150",
+      "imageHint": "logo"
+    },
+    {
+      "id": "terms-image",
+      "description": "A branded image for the terms page showing the logo.",
+      "imageUrl": "/images/terms-image.webp",
+      "imageHint": "logo branding"
+    },
+    {
+      "id": "map-background",
+      "description": "A stylized map background for the points of sale page.",
+      "imageUrl": "https://images.unsplash.com/photo-1542051841857-5f90071e7989?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtYXAlMjBwb2ludHN8ZW58MHx8fHwxNzYwNDM0NjIwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "map points"
+    },
+    {
+      "id": "faq-hero",
+      "description": "Abstract image with question marks for the FAQ page.",
+      "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHF1ZXN0aW9uJTIwbWFya3xlbnwwfHx8fDE3NjA0MzQ2MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract question"
+    },
+    {
+      "id": "blog-hero",
+      "description": "A person writing in a journal, representing a blog or magazine.",
+      "imageUrl": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxibG9nJTIwd3JpdGluZ3xlbnwwfHx8fDE3NjA0MzQ2MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "writing book"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    # Load environment variables from .env.local
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+    restart: always

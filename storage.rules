@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Regla auxiliar para Admin
+    function isAdmin() {
+       return request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Regla existente (mantenemos por si acaso)
+    match /event-posters/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Permitir subidas a carpeta "events"
+    match /events/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // NUEVA: Permitir subidas a carpeta "venues"
+    match /venues/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // NUEVA: Permitir subidas a carpeta "presentations"
+    match /presentations/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /admin-reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
