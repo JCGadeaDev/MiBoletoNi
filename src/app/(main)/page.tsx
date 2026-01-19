@@ -102,7 +102,7 @@ const HeroCarousel = ({ events }: { events: CombinedEvent[] }) => {
                                         <div className="pt-4">
                                             <Button asChild size="lg" className="rounded-full px-8 text-base md:text-lg font-bold shadow-lg hover:scale-105 transition-transform">
                                                 <Link href={`/events/${event.id}`}>
-                                                    Conseguir Boletos <ArrowRight className="ml-2 w-5 h-5" />
+                                                    Boletos <ArrowRight className="ml-2 w-5 h-5" />
                                                 </Link>
                                             </Button>
                                         </div>

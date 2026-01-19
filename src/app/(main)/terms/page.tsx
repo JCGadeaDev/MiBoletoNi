@@ -80,7 +80,7 @@ export default function TermsPage() {
 
                         <div className="mt-12 p-6 bg-primary/5 rounded-xl border border-primary/10 text-center">
                             <p className="text-sm m-0">
-                                ¿Tienes dudas sobre estos términos? Escríbenos a <a href="mailto:legal@miboletoni.com" className="text-primary font-bold no-underline hover:underline">legal@miboletoni.com</a>
+                                ¿Tienes dudas sobre estos términos? Escríbenos a <a href="mailto:info@miboletoni.com" className="text-primary font-bold no-underline hover:underline">info@miboletoni.com</a>
                             </p>
                         </div>
                     </article>

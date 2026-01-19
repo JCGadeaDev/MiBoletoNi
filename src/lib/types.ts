@@ -1,5 +1,3 @@
-
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -12,6 +10,8 @@ export type Event = {
   category: 'Conciertos y Festivales' | 'Teatro' | 'Deportes' | 'Expo y Ferias' | string;
   description?: string;
   imageUrl?: string;
+  // Agregamos artist opcional por si viene de la DB
+  artist?: string;
 };
 
 export type Venue = {
@@ -53,7 +53,7 @@ export type User = {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'regular';
+  role: 'admin' | 'regular' | 'sales';
   promotionsAccepted: boolean;
   termsAccepted: boolean;
   createdAt?: Timestamp;
@@ -73,8 +73,9 @@ export type Order = {
 }
 
 // --- Types for Frontend Combination & Display ---
+// ESTA ES LA INTERFAZ QUE USA EVENTCARD
 export interface CombinedEvent {
-  id: string; // Event ID
+  id: string; 
   name: string;
   category: string;
   description?: string;
@@ -83,9 +84,13 @@ export interface CombinedEvent {
   // Data from the first available Presentation and its Venue
   city: string;
   venue: string;
-  date: string; // Formatted date string
+  date: string; // Formatted date string (Texto: "12 Octubre")
   rawDate: Date; // Actual date object for sorting
-  presentationId?: string; // ID of the first presentation
+  presentationId?: string; 
+
+  // --- NUEVOS CAMPOS AGREGADOS PARA EL DISEÑO ---
+  artist?: string;    // Para mostrar "con Artista X"
+  minPrice?: number;  // Para mostrar "Desde $25"
 }
 
 
