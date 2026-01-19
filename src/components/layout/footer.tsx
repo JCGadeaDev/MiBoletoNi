@@ -93,7 +93,7 @@ export function Footer() {
                 <ul className="space-y-2">
                     <li><Link href="/contact" className="text-base text-muted-foreground hover:text-primary transition-colors">Contacto</Link></li>
                     <li><Link href="/faq" className="text-base text-muted-foreground hover:text-primary transition-colors">Preguntas Frecuentes</Link></li>
-                    <li><Link href="/auth" className="text-base text-muted-foreground hover:text-primary transition-colors">Mi Cuenta</Link></li>
+                    <li><Link href="/auth/login" className="text-base text-muted-foreground hover:text-primary transition-colors">Mi Cuenta</Link></li>
                 </ul>
             </div>
             <div>

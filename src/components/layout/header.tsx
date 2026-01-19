@@ -102,7 +102,7 @@ export function Header() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button asChild><Link href="/auth">Iniciar Sesión</Link></Button>
+                        <Button asChild><Link href="/auth/login">Iniciar Sesión</Link></Button>
                     )}
                 </div>
             </div>
@@ -160,7 +160,7 @@ export function Header() {
                   </DropdownMenu>
                 ) : (
                   <Button asChild variant="ghost" size="icon">
-                    <Link href="/auth">
+                    <Link href="/auth/login">
                       <UserIcon className="h-5 w-5" />
                       <span className="sr-only">Iniciar Sesión</span>
                     </Link>
@@ -222,7 +222,7 @@ export function Header() {
                     </DropdownMenu>
                 ) : (
                     <Button asChild size="sm" variant="outline">
-                        <Link href="/auth">
+                        <Link href="/auth/login">
                             <LogIn className="mr-2 h-4 w-4" />
                             Ingresar
                         </Link>

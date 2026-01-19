@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
             
             <div className="mt-6 text-center">
                 <Button variant="link" asChild className="text-muted-foreground hover:text-primary">
-                    <Link href="/auth" className="flex items-center gap-2">
+                    <Link href="/auth/login" className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" />
                         Regresar al Ingreso
                     </Link>

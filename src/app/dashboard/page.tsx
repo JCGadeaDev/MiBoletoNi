@@ -51,7 +51,7 @@ export default function DashboardPage() {
         try {
             await signOut(auth);
             await clearSessionCookie();
-            router.push('/auth');
+            router.push('/auth/login');
         } catch (error) {
             console.error("Error signing out: ", error);
         }

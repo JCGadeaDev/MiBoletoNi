@@ -56,7 +56,7 @@ export default function SecurityPage() {
             // Logout and redirect user
             await signOut(auth);
             await clearSessionCookie();
-            router.push('/auth');
+            router.push('/auth/login');
 
         } catch (error: any) {
             let title = "Error al cambiar la contraseña";
