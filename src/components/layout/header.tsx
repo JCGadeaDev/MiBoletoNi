@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from '@/components/ui/input';
-import { clearSessionCookie } from '@/app/(auth)/auth/page';
+import { clearSessionCookie } from '@/app/(auth)/auth/login/page';
 import { EventContext } from '@/context/EventContext';
 import type { CombinedEvent } from '@/lib/types';
 

@@ -41,7 +41,7 @@ function DashboardView() {
     useEffect(() => {
         // Wait until firestore is initialized, user loading is finished, and the user is confirmed as admin
         if (!firestore || isUserLoading || !user?.claims?.role || user.claims.role !== 'admin') {
-            if (!isUserLoading && user && user.claims.role !== 'admin') {
+            if (!isUserLoading && user && user?.claims?.role !== 'admin') {
                 setError("No tienes permisos para ver esta información.");
                 setIsLoading(false);
             }

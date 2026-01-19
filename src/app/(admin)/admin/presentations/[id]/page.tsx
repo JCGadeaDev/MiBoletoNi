@@ -1,58 +1,64 @@
 'use client';
 
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+// --- Imports de Formularios y Validación ---
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// --- Imports de Firebase ---
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc, updateDoc, Timestamp, query, deleteDoc, writeBatch, where, getDocs, getDoc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
+import { 
+  doc, collection, addDoc, updateDoc, deleteDoc, 
+  writeBatch, query, where, getDocs, getDoc, 
+  Timestamp 
+} from 'firebase/firestore';
+
+// --- Imports de Tipos (Asegúrate que la ruta sea correcta) ---
 import type { Presentation, Event, Venue, WithId, PricingTier, Seat } from '@/lib/types';
+
+// --- Imports de Server Actions ---
+// Si aún no creas este archivo, comenta esta línea para que compile
+import { resetPresentationSeats } from "@/app/actions/reset-seats";
+
+// --- Imports de UI Components ---
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ArrowLeft, Loader2, Calendar as CalendarIcon, Save, MoreHorizontal, Trash2, Pencil, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useEffect, useState, useMemo } from 'react';
-import { resetPresentationSeats } from "@/app/actions/reset-seats"; // <--- IMPORTANTE: Asegúrate de tener este archivo
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
+import { 
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle 
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
+  ArrowLeft, Loader2, Calendar as CalendarIcon, Save, 
+  MoreHorizontal, Trash2, Pencil, RefreshCw, AlertTriangle 
+} from 'lucide-react';
 
-// --- Esquemas de Validación (Sin cambios) ---
+
+// ==========================================
+// 1. ESQUEMAS DE VALIDACIÓN (ZOD)
+// ==========================================
+
 const presentationSchema = z.object({
   eventDate: z.date({ required_error: "La fecha y hora son requeridas." }),
   status: z.enum(['A la venta', 'Pospuesto', 'Agotado', 'Cancelado'], { required_error: "Debes seleccionar un estado." }),
@@ -85,7 +91,10 @@ const seatsSchema = z.object({
 type SeatsFormValues = z.infer<typeof seatsSchema>;
 
 
-// --- Componente 1: Editar Presentación ---
+// ==========================================
+// 2. COMPONENTE: EDITAR PRESENTACIÓN
+// ==========================================
+
 function EditPresentationForm({ presentation }: { presentation: WithId<Presentation> }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -153,7 +162,7 @@ function EditPresentationForm({ presentation }: { presentation: WithId<Presentat
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                       <div className="p-3 border-t border-border">
-                        <input type="time" className="w-full border-input" defaultValue={field.value ? format(field.value, 'HH:mm') : ''} onChange={(e) => {
+                        <input type="time" className="w-full border-input bg-transparent" defaultValue={field.value ? format(field.value, 'HH:mm') : ''} onChange={(e) => {
                             if (!field.value) return;
                             const newDate = new Date(field.value);
                             const [hours, minutes] = e.target.value.split(':');
@@ -200,13 +209,12 @@ function EditPresentationForm({ presentation }: { presentation: WithId<Presentat
   )
 }
 
-// --- Componente 2: Gestionar Localidades (General) ---
+
+// ==========================================
+// 3. COMPONENTE: GESTIONAR LOCALIDADES (GENERAL)
+// ==========================================
+
 function ManageTiers({ presentationId }: { presentationId: string }) {
-    // ... (Sin cambios en este componente, el código previo estaba bien)
-    // Para ahorrar espacio en la respuesta, asumo que usas el mismo bloque de ManageTiers que me enviaste.
-    // Si necesitas que lo repita, avísame, pero el problema no estaba aquí.
-    
-    // NOTA: Pego el código básico para que compile si copias todo el archivo.
     const firestore = useFirestore();
     const { toast } = useToast();
     const [tierToEdit, setTierToEdit] = useState<WithId<PricingTier> | null>(null);
@@ -276,7 +284,6 @@ function ManageTiers({ presentationId }: { presentationId: string }) {
                     </Table>
                 </div>
             </CardContent>
-            {/* Diálogos simplificados por brevedad */}
              <Dialog open={!!tierToEdit} onOpenChange={(open) => !open && setTierToEdit(null)}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Editar</DialogTitle></DialogHeader>
@@ -291,8 +298,9 @@ function ManageTiers({ presentationId }: { presentationId: string }) {
 }
 
 
-// --- Componente 3: Gestionar Asientos (CORREGIDO) ---
-// Agregado SeatCounter y corregida la Query
+// ==========================================
+// 4. COMPONENTE: GESTIONAR ASIENTOS (NUMERADOS)
+// ==========================================
 
 function SeatCounter({ seats }: { seats: Seat[] }) {
     const total = seats.length;
@@ -305,13 +313,13 @@ function SeatCounter({ seats }: { seats: Seat[] }) {
                 <p className="text-sm font-medium text-muted-foreground">Total Creados</p>
                 <p className="text-2xl font-bold">{total}</p>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
-                <p className="text-sm font-medium text-green-600">Disponibles</p>
-                <p className="text-2xl font-bold text-green-700">{available}</p>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Disponibles</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-500">{available}</p>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
-                <p className="text-sm font-medium text-red-600">Vendidos / Ocupados</p>
-                <p className="text-2xl font-bold text-red-700">{sold}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800 text-center">
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">Vendidos / Ocupados</p>
+                <p className="text-2xl font-bold text-red-700 dark:text-red-500">{sold}</p>
             </div>
         </div>
     );
@@ -322,8 +330,7 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
     const { toast } = useToast();
     const [sectionToDelete, setSectionToDelete] = useState<{name: string, force: boolean} | null>(null);
 
-    // [CORRECCIÓN]: Quitamos 'orderBy' de la query para evitar problemas de índices faltantes en Firebase.
-    // Ordenamos en el cliente con useMemo.
+    // Tipamos explícitamente la colección como Seat
     const seatsQuery = useMemoFirebase(
         () => firestore ? query(collection(firestore, `presentations/${presentationId}/seats`)) : null,
         [firestore, presentationId]
@@ -332,7 +339,7 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
 
     const seats = useMemo(() => {
       if (!seatsData) return [];
-      // Ordenamiento seguro en cliente
+      // Ordenamiento seguro en cliente para evitar índices de Firestore
       return [...seatsData].sort((a, b) => {
           if (a.section !== b.section) return a.section.localeCompare(b.section);
           if (a.row !== b.row) return a.row.localeCompare(b.row);
@@ -340,9 +347,13 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
       });
     }, [seatsData]);
 
+    // AQUÍ ESTÁ LA MAGIA PARA ELIMINAR EL ERROR 'any' DE LA 's'
     const groupedAndSortedSeats = useMemo(() => {
-        if (!seats) return { sections: new Map(), seatCount: 0 };
+        // CORRECCIÓN: Definimos explícitamente los tipos del Map <string, WithId<Seat>[]>
+        if (!seats) return { sections: new Map<string, WithId<Seat>[]>(), seatCount: 0 };
+        
         const sections = new Map<string, WithId<Seat>[]>();
+        
         seats.forEach(seat => {
             if (!sections.has(seat.section)) {
                 sections.set(seat.section, []);
@@ -350,7 +361,7 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
             sections.get(seat.section)?.push(seat);
         });
         
-        // Sort seats within each section
+        // Ordenamos los asientos dentro de cada sección
         sections.forEach((sectionSeats) => {
             sectionSeats.sort((a, b) => {
                  if (a.row < b.row) return -1;
@@ -403,22 +414,18 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
     const onDeleteSection = async () => {
         if (!firestore || !sectionToDelete) return;
         try {
-            // Si es force=true, borramos TODO, vendido o no.
-            // Si es force=false, solo disponibles.
-            
             let queryConstraints = [where('section', '==', sectionToDelete.name)];
             if (!sectionToDelete.force) {
-                // Verificar si hay vendidos antes de borrar
+                // Verificar si hay vendidos
                 const soldSeatsQuery = query(collection(firestore, `presentations/${presentationId}/seats`), where('section', '==', sectionToDelete.name), where('status', '==', 'sold'));
                 const soldSnap = await getDocs(soldSeatsQuery);
                 if (!soldSnap.empty) {
-                     toast({ variant: 'destructive', title: 'Error', description: `Hay ${soldSnap.size} asientos vendidos. Usa "Forzar Eliminación" si es un error.` });
-                     setSectionToDelete(null);
-                     return;
+                      toast({ variant: 'destructive', title: 'Error', description: `Hay ${soldSnap.size} asientos vendidos. Usa "Forzar Eliminación" si es un error.` });
+                      setSectionToDelete(null);
+                      return;
                 }
             }
 
-            // Proceder a borrar
             const seatsToDeleteQuery = query(collection(firestore, `presentations/${presentationId}/seats`), ...queryConstraints);
             const snapshot = await getDocs(seatsToDeleteQuery);
             
@@ -472,9 +479,10 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
                     </Form>
 
                     <h3 className="text-lg font-medium mb-4">Estructura Actual</h3>
-                    <div className="border rounded-lg max-h-96 overflow-y-auto">
+                    {/* MEJORA VISUAL: Sticky Header */}
+                    <div className="border rounded-lg max-h-96 overflow-y-auto relative">
                         <Table>
-                            <TableHeader className="sticky top-0 bg-secondary">
+                            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                                 <TableRow>
                                     <TableHead>Sección</TableHead>
                                     <TableHead>Asientos</TableHead>
@@ -489,6 +497,7 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
                                         <TableCell className="font-medium">{sectionName}</TableCell>
                                         <TableCell>{sectionSeats.length} asientos</TableCell>
                                         <TableCell>
+                                            {/* Ahora TypeScript sabe que 's' es un Seat */}
                                             <Badge variant={sectionSeats.every(s => s.status === 'available') ? 'default' : 'secondary'}>
                                                 {sectionSeats.filter(s => s.status === 'sold').length} vendidos
                                             </Badge>
@@ -542,7 +551,9 @@ function ManageSeats({ presentationId }: { presentationId: string }) {
 }
 
 
-// --- Componente Principal ---
+// ==========================================
+// 5. COMPONENTE PRINCIPAL (PÁGINA)
+// ==========================================
 
 export default function ManagePresentationPage() {
     const params = useParams();
@@ -577,6 +588,7 @@ export default function ManagePresentationPage() {
         
         setIsResetting(true);
         try {
+            // Asegúrate de haber creado el archivo actions/reset-seats.ts
             const result = await resetPresentationSeats(presentationId);
             if(result.success) {
                 alert("Asientos liberados exitosamente.");
@@ -603,7 +615,7 @@ export default function ManagePresentationPage() {
                     <p className="text-muted-foreground">{venue.name} - {presentation.eventDate.toDate().toLocaleString('es-NI')}</p>
                 </div>
                 <div className="flex gap-2">
-                    {/* BOTÓN DE EMERGENCIA PARA ASIENTOS ZOMBIS */}
+                    {/* BOTÓN DE EMERGENCIA */}
                     {venue.type === 'numbered' && (
                         <Button variant="destructive" size="sm" onClick={handleResetSeats} disabled={isResetting}>
                             {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
