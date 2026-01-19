@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { UserCircle, KeyRound, Ticket, ShieldCheck, LogOut, AppWindow, ArrowRight } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { clearSessionCookie } from "@/app/(auth)/auth/page";
+import { clearSessionCookie } from "@/app/(auth)/auth/login/page";
 
 // --- Componente reutilizable para las tarjetas de navegación ---
 function DashboardActionCard({ href, icon: Icon, title, description }: { href: string; icon: React.ElementType; title: string; description: string; }) {

@@ -12,7 +12,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, signOu
 import Link from "next/link";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { FirebaseError } from "firebase/app";
-import { clearSessionCookie } from "@/app/(auth)/auth/page";
+import { clearSessionCookie } from "@/app/(auth)/auth/login/page";
 
 export default function SecurityPage() {
     const { user, isUserLoading } = useUser();
