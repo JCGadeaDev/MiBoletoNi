@@ -1,169 +1,117 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { ticketService } from '@/lib/ticket-service';
+import jwt from 'jsonwebtoken';
+import { FieldValue } from 'firebase-admin/firestore';
 
-// 1. Tipado básico para el payload de Fygaro (ajusta según documentación exacta)
-interface FygaroPayload {
+interface FygaroJwtPayload {
     custom_reference?: string;
     reference?: string;
     status?: string;
-    transaction_status?: string;
-    transaction_id?: string;
-    id?: string;
-    response_message?: string;
-    jwt?: string; // Fygaro suele enviar un JWT para validar
-    data?: {
-        reference?: string;
-        status?: string;
-        id?: string;
-    };
+    remote_id?: string;
+    amount?: number;
     [key: string]: any;
 }
 
-// TODO: Implementa esta función con tu clave secreta de Fygaro
-const verifyFygaroSignature = (payload: any, headers: Headers): boolean => {
-    // Aquí deberías verificar que la petición viene realmente de Fygaro.
-    // Fygaro suele usar un JWT firmada o un header específico.
-    // Si no verificas esto, es una vulnerabilidad de seguridad crítica.
-    return true; // Cambiar a la lógica real
+const verifyAndDecodeFygaroJwt = (payload: any): FygaroJwtPayload | null => {
+    if (!payload || !payload.jwt) {
+        console.error('❌ [WEBHOOK] No se encontró el campo JWT');
+        return null;
+    }
+    try {
+        const secret = process.env.FYGARO_WEBHOOK_SECRET || '';
+        return jwt.verify(payload.jwt, secret) as FygaroJwtPayload;
+    } catch (e) {
+        console.error('❌ [WEBHOOK] Error de firma JWT:', e);
+        return null;
+    }
 };
 
 export async function POST(request: Request) {
     try {
-        // --- 1. LEER BODY ---
         const rawBody = await request.text();
-        console.log('🔔 [WEBHOOK] Raw Body recibido'); // Evita loguear todo el body si contiene datos sensibles
+        if (!rawBody) return NextResponse.json({ error: 'Body vacío' }, { status: 400 });
 
-        if (!rawBody) {
-            return NextResponse.json({ error: 'Empty body' }, { status: 400 });
-        }
-
-        // --- 2. PARSEAR JSON ---
-        let payload: FygaroPayload;
+        let outerPayload: any;
         try {
-            payload = JSON.parse(rawBody);
+            outerPayload = JSON.parse(rawBody);
         } catch (e) {
-            console.error('❌ [WEBHOOK] JSON Inválido');
-            return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON mal formado' }, { status: 400 });
         }
 
-        // --- 3. SEGURIDAD ---
-        if (!verifyFygaroSignature(payload, request.headers)) {
-             console.error('⛔ [WEBHOOK] Firma inválida o intento de fraude.');
-             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const data = verifyAndDecodeFygaroJwt(outerPayload);
+        if (!data) return NextResponse.json({ error: 'JWT inválido' }, { status: 401 });
 
-        // --- 4. NORMALIZACIÓN DE DATOS ---
-        const reference = payload.custom_reference || payload.reference || payload?.data?.reference;
-        const statusRaw = payload.status || payload.transaction_status || payload?.data?.status;
-        const status = statusRaw?.toLowerCase();
-        const transactionId = payload.transaction_id || payload.id || payload?.data?.id;
+        const reference = data.custom_reference || data.reference;
+        const status = data.status?.toLowerCase();
+        const transactionId = data.remote_id || data.id;
 
-        if (!reference) {
-            console.warn('⚠️ [WEBHOOK] Sin Reference ID. Ignorando.');
-            return NextResponse.json({ error: 'No reference found' }, { status: 400 });
-        }
+        if (!reference) return NextResponse.json({ error: 'Falta referencia' }, { status: 400 });
 
-        // --- 5. LÓGICA DE ESTADOS ---
-        const isPaid = ['paid', 'approved', 'completed'].includes(status || '');
-        const isFailed = ['declined', 'voided', 'failed'].includes(status || '');
+        const isPaid = ['paid', 'approved', 'success', 'completed'].includes(status || '');
 
         if (isPaid) {
-            console.log(`🔍 [WEBHOOK] Procesando pago exitoso: ${reference}`);
-            
             const intentRef = adminDb.collection('payment_intents').doc(reference);
 
-            // USAMOS UNA TRANSACCIÓN O LOGICA DE BLOQUEO
-            // Para evitar condiciones de carrera (doble entrada)
             const shouldProcess = await adminDb.runTransaction(async (t) => {
                 const doc = await t.get(intentRef);
-                
                 if (!doc.exists) return 'NOT_FOUND';
-                const data = doc.data();
+                
+                const intentData = doc.data();
+                if (intentData?.status === 'completed') return 'ALREADY_DONE';
+                if (intentData?.status === 'processing') return 'PROCESSING';
 
-                // Idempotencia fuerte: Si ya está completado O procesando, paramos.
-                if (data?.status === 'completed') return 'ALREADY_DONE';
-                if (data?.status === 'processing') return 'PROCESSING'; // Evita doble ejecución simultánea
-
-                // Bloqueamos el documento marcándolo como 'processing'
                 t.update(intentRef, { 
                     status: 'processing',
-                    lastWebhookAt: new Date()
+                    lastWebhookAt: FieldValue.serverTimestamp(),
+                    fygaroTransactionId: transactionId
                 });
-                return { data: data }; // Devolvemos los datos para usarlos fuera
+                return { data: intentData };
             });
 
-            // Manejo de respuestas de la transacción
+            // --- VALIDACIONES DE TIPO (Resuelve el error de 'undefined') ---
             if (shouldProcess === 'NOT_FOUND') {
-                console.error(`❌ [WEBHOOK] Intent no encontrado en DB: ${reference}`);
-                return NextResponse.json({ received: true, error: 'Intent not found' });
+                return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
             }
             if (shouldProcess === 'ALREADY_DONE' || shouldProcess === 'PROCESSING') {
-                console.log('ℹ️ [WEBHOOK] Orden ya procesada o en proceso.');
-                return NextResponse.json({ received: true });
+                return NextResponse.json({ received: true, message: 'Ya procesado' });
             }
 
-            // Si llegamos aquí, tenemos luz verde y el documento está en estado 'processing'
-            // @ts-ignore - TypeScript no sabe que shouldProcess es un objeto aquí
-            const intent = shouldProcess.data; 
+            // Aquí TypeScript ya sabe que shouldProcess es el objeto con 'data'
+            const intent = (shouldProcess as { data: any }).data; 
 
             try {
-                console.log(`🎟️ [WEBHOOK] Generando tickets para: ${intent?.userId}`);
-                
-                const userPhone = intent?.userPhone || ''; 
-
                 const result = await ticketService.finalizePurchase(
-                    intent?.userId,
-                    intent?.purchaseData.presentationId,
-                    intent?.purchaseData.tickets,
-                    intent?.purchaseData.type,
-                    intent?.purchaseData.totalPrice,
-                    intent?.purchaseData.currency,
-                    userPhone
+                    intent.userId,
+                    intent.purchaseData.presentationId,
+                    intent.purchaseData.tickets,
+                    intent.purchaseData.type,
+                    intent.purchaseData.totalPrice,
+                    intent.purchaseData.currency,
+                    intent.userPhone || ''
                 );
 
-                // Actualizar a Completado
                 await intentRef.update({
                     status: 'completed',
                     orderId: result.orderId,
-                    transactionId: transactionId,
-                    fygaroPayload: payload,
-                    updatedAt: new Date()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ [WEBHOOK] ORDEN FINALIZADA: ${result.orderId}`);
-                return NextResponse.json({ received: true, orderId: result.orderId });
+                return NextResponse.json({ success: true, orderId: result.orderId });
 
             } catch (serviceError: any) {
-                console.error('💀 [WEBHOOK] Error creando tickets, revirtiendo estado:', serviceError);
-                
-                // IMPORTANTE: Si falla la creación de tickets, revertimos el estado 'processing'
-                // para permitir un reintento manual o automático, o lo marcamos como error.
                 await intentRef.update({
                     status: 'error_generating_tickets',
                     errorLog: serviceError.message,
-                    updatedAt: new Date()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
-
-                return NextResponse.json({ error: 'Ticket creation failed' }, { status: 500 });
+                return NextResponse.json({ error: 'Fallo al generar tickets' }, { status: 500 });
             }
-
-        } else if (isFailed) {
-            // Lógica de fallo
-            await adminDb.collection('payment_intents').doc(reference).update({ 
-                status: 'failed', 
-                failureReason: payload.response_message || 'Declined',
-                updatedAt: new Date()
-            });
-            console.log(`❌ [WEBHOOK] Pago rechazado: ${reference}`);
-            return NextResponse.json({ received: true });
         }
 
-        // Estado desconocido
-        return NextResponse.json({ received: true });
+        return NextResponse.json({ received: true, status: 'ignored' });
 
     } catch (error: any) {
-        console.error('💀 [WEBHOOK] Error Fatal:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
