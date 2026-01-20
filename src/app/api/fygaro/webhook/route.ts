@@ -14,31 +14,19 @@ export async function POST(request: Request) {
 
         // 1. Decodificación
         const data = jwt.verify(outerPayload.jwt, secret) as any;
-
-        // 2. Mapeo Inteligente (Buscamos la orden y el éxito)
-        const reference = data.custom_reference || data.customReference || data.remote_id;
         
-        // Fygaro usa a veces response_code "00" para éxito o response_message "Approved"
-        const responseCode = String(data.response_code || '');
-        const responseMsg = String(data.response_message || data.message || '').toLowerCase();
-        const statusField = String(data.status || '').toLowerCase();
+        // 2. Mapeo de Referencias (Capturamos el ID de Firestore que vimos en los logs)
+        const reference = data.custom_reference || data.customReference || data.remote_id;
+        const fygaroReference = data.reference || data.id;
 
-        // Consideramos éxito si el código es 00 O si el mensaje dice aprobado/success
-        const isSuccess = 
-            responseCode === '00' || 
-            responseMsg.includes('approved') || 
-            responseMsg.includes('success') ||
-            statusField.includes('approved') ||
-            statusField.includes('paid');
-
-        console.log(`🔎 [DEBUG] Ref: ${reference}, Code: ${responseCode}, Msg: ${responseMsg}, IsSuccess: ${isSuccess}`);
+        // 3. Lógica de Éxito (Si hay referencias y no hay error, es un éxito)
+        const responseMsg = String(data.response_message || data.status || '').toLowerCase();
+        const isError = responseMsg.includes('error') || responseMsg.includes('declined');
+        const isSuccess = (reference && fygaroReference && !isError);
 
         if (reference && isSuccess) {
-            console.log(`🚀 [WEBHOOK] Procesando orden aprobada: ${reference}`);
-            
             const intentRef = adminDb.collection('payment_intents').doc(reference);
 
-            // Usamos una transacción para asegurar que no se procese dos veces
             const transactionResult = await adminDb.runTransaction(async (transaction) => {
                 const doc = await transaction.get(intentRef);
                 if (!doc.exists) return 'NOT_FOUND';
@@ -46,20 +34,25 @@ export async function POST(request: Request) {
                 const intentData = doc.data();
                 if (intentData?.status === 'completed') return 'ALREADY_DONE';
 
-                // Marcamos como procesando
                 transaction.update(intentRef, { 
                     status: 'processing',
-                    fygaroReference: data.reference, // Guardamos el O-YWKJ...
+                    fygaroReference: fygaroReference,
                     lastWebhookAt: FieldValue.serverTimestamp(),
                 });
 
-                return { intentData };
+                return { intentData }; // Retornamos el objeto con los datos
             });
 
-            if (typeof transactionResult === 'object') {
-                const intent = transactionResult.intentData;
+            // --- SOLUCIÓN AL ERROR DE UNDEFINED ---
+            if (typeof transactionResult === 'object' && transactionResult !== null) {
+                // Forzamos a TS a entender que intentData existe
+                const intent = transactionResult.intentData as any;
 
-                // 3. Generar los boletos finales
+                if (!intent || !intent.purchaseData) {
+                    throw new Error("Datos de compra no encontrados en el intent");
+                }
+
+                // 4. Finalizar compra y generar tickets
                 const result = await ticketService.finalizePurchase(
                     intent.userId,
                     intent.purchaseData.presentationId,
@@ -70,22 +63,21 @@ export async function POST(request: Request) {
                     intent.userPhone || ''
                 );
 
-                // 4. Finalizar la orden
+                // 5. Actualizar estado final
                 await intentRef.update({
                     status: 'completed',
                     orderId: result.orderId,
                     updatedAt: FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ [WEBHOOK] ¡ORDEN FINALIZADA! ID: ${result.orderId}`);
-                return NextResponse.json({ success: true });
+                console.log(`✅ [WEBHOOK] ¡TRANSACCIÓN COMPLETADA! Orden: ${result.orderId}`);
+                return NextResponse.json({ success: true, orderId: result.orderId });
             }
 
             return NextResponse.json({ message: transactionResult });
         }
 
-        console.warn('⚠️ [WEBHOOK] No se cumplieron las condiciones de éxito:', { reference, isSuccess });
-        return NextResponse.json({ received: true, error: 'Payment not approved or reference missing' });
+        return NextResponse.json({ received: true, message: 'Conditions not met' });
 
     } catch (error: any) {
         console.error('💀 [WEBHOOK] Error crítico:', error.message);
