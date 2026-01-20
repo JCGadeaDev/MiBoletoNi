@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { ticketService } from '@/lib/ticket-service';
-import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
     try {
-        // 1. SEGURIDAD: Obtener la cookie de sesión
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get('session')?.value || '';
+        // 1. SEGURIDAD: Leer el Token del Header (Bearer Token)
+        const authHeader = request.headers.get('Authorization');
         
-        if (!sessionCookie) {
-            return NextResponse.json({ error: 'No hay sesión activa' }, { status: 401 });
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'No se proporcionó token de autorización' }, { status: 401 });
         }
 
-        // 2. VERIFICACIÓN: Decodificar la cookie y revisar el Rol en DB
-        const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
+        const idToken = authHeader.split('Bearer ')[1];
+
+        // 2. VERIFICACIÓN: Decodificar el token con Firebase Admin
+        const decodedClaims = await adminAuth.verifyIdToken(idToken);
         
         // Consultamos el usuario en Firestore para ver si es 'admin'
         const userDoc = await adminDb.collection('users').doc(decodedClaims.uid).get();
@@ -34,10 +34,9 @@ export async function POST(request: Request) {
         console.log(`⚠️ [ADMIN] Cancelando orden ${orderId}. Autor: ${decodedClaims.email}. Razón: ${reason}`);
 
         // 4. ACCIÓN: Ejecutar la lógica del TicketService
-        // Esta función libera los asientos y cambia el status a 'refunded'
         await ticketService.cancelOrder(orderId);
 
-        // 5. AUDITORÍA: (Opcional pero recomendado) Guardar quién lo hizo
+        // 5. AUDITORÍA
         await adminDb.collection('admin_logs').add({
             action: 'cancel_order',
             targetOrderId: orderId,

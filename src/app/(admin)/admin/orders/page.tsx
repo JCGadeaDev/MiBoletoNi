@@ -2,7 +2,10 @@
 
 import { PageHeader, PageHeaderTitle, PageHeaderActions } from "@/components/pages/admin/page-header";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowLeft, Trash2, Loader2, Ban, RefreshCcw } from "lucide-react";
+import { Input } from "@/components/ui/input"; // Importamos Input
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { FileDown, ArrowLeft, Trash2, Loader2, Ban, RefreshCcw, Search, Copy } from "lucide-react";
 import { useUser, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,19 +16,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { deleteAllOrders } from "@/app/actions/orders";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 function OrderManagementView() {
     const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
     const { toast } = useToast();
     
-    // Estados
-    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    // Estados principales
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-    const [cancellingId, setCancellingId] = useState<string | null>(null); // Nuevo estado para loader individual
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+    
+    // Estados para búsqueda y filtrado
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    // Estados para el Modal de Cancelación
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+    const [cancelReason, setCancelReason] = useState("");
+    const [isCancelling, setIsCancelling] = useState(false);
 
     // Fetch de órdenes
     const fetchAllOrders = async () => {
@@ -36,10 +54,9 @@ function OrderManagementView() {
             const querySnapshot = await getDocs(ordersQuery);
             const allOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
             setOrders(allOrders);
-            setError(null);
         } catch (err: any) {
-            console.error("Error fetching all orders:", err);
-            setError(err);
+            console.error("Error fetching orders:", err);
+            toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las órdenes" });
         } finally {
             setIsLoading(false);
         }
@@ -53,20 +70,41 @@ function OrderManagementView() {
         fetchAllOrders();
     }, [firestore, user, isUserLoading]);
 
-    // --- NUEVA FUNCIÓN: ANULAR UNA ORDEN INDIVIDUAL ---
-    const handleCancelSingleOrder = async (orderId: string) => {
-        const reason = window.prompt("⚠️ ¿Estás seguro de ANULAR esta orden?\n\nEsto invalidará los boletos y liberará los asientos.\n\nEscribe la razón de la anulación:");
-        
-        if (!reason) return; // Si cancela o lo deja vacío (puedes obligar a escribir si quieres)
+    // --- LÓGICA DE FILTRADO ---
+    const filteredOrders = orders.filter(order => 
+        order.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-        setCancellingId(orderId);
+    // --- ABRIR MODAL DE CANCELACIÓN ---
+    const openCancelModal = (orderId: string) => {
+        setOrderToCancel(orderId);
+        setCancelReason("");
+        setIsCancelModalOpen(true);
+    };
+
+    // --- EJECUTAR CANCELACIÓN (Con Token) ---
+    const handleConfirmCancel = async () => {
+        if (!orderToCancel || !user) return;
+        if (!cancelReason.trim()) {
+            toast({ variant: "destructive", title: "Razón requerida", description: "Debes especificar por qué anulas la orden." });
+            return;
+        }
+
+        setIsCancelling(true);
         try {
+            // 1. Obtener el Token actual del usuario (SOLUCIÓN AL ERROR 401)
+            const idToken = await user.getIdToken();
+
+            // 2. Enviar petición con el token en el header
             const response = await fetch('/api/admin/orders/cancel', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` // <--- CLAVE DE SEGURIDAD
+                },
                 body: JSON.stringify({ 
-                    orderId, 
-                    reason 
+                    orderId: orderToCancel, 
+                    reason: cancelReason 
                 })
             });
 
@@ -76,21 +114,20 @@ function OrderManagementView() {
 
             toast({ title: "Orden Anulada", description: "El inventario ha sido liberado correctamente." });
             
-            // Recargamos las órdenes para ver el cambio de estado
+            // Cerrar modal y recargar
+            setIsCancelModalOpen(false);
             await fetchAllOrders();
 
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
-            setCancellingId(null);
+            setIsCancelling(false);
         }
     };
 
-    // Función para borrar TODAS las órdenes (Limpieza masiva)
+    // Funciones auxiliares (Limpieza y Reporte)...
     const handleClearOrders = async () => {
-        const confirmed = window.confirm("⚠️ ¿ESTÁS SEGURO?\nEsto borrará TODAS las órdenes de la base de datos permanentemente.\nEsta acción no se puede deshacer.");
-        if (!confirmed) return;
-
+        if(!window.confirm("⚠️ ¿Borrar TODO el historial permanentemente?")) return;
         setIsDeleting(true);
         try {
             const result = await deleteAllOrders();
@@ -100,58 +137,32 @@ function OrderManagementView() {
             } else {
                 toast({ variant: "destructive", title: "Error", description: result.error });
             }
-        } catch (e) {
-            toast({ variant: "destructive", title: "Error", description: "Falló la conexión con el servidor." });
-        } finally {
-            setIsDeleting(false);
-        }
+        } catch (e) { toast({ variant: "destructive", title: "Error", description: "Falló la conexión." }); }
+        finally { setIsDeleting(false); }
     };
 
-    // Función reporte
     const handleGenerateReport = async () => {
         setIsGeneratingReport(true);
         try {
             const idToken = await user?.getIdToken();
-            if (!idToken) throw new Error("No se pudo obtener el token.");
-
+            if (!idToken) throw new Error("No token");
             const response = await fetch('/api/reports/sales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Error en el servidor');
-            }
-
+            if (!response.ok) throw new Error('Error servidor');
             const result = await response.json();
-            
             if (result.csv) {
-                const byteCharacters = atob(result.csv);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: 'text/csv;charset=utf-8;' });
-                
                 const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`);
-                document.body.appendChild(link);
+                link.href = `data:text/csv;base64,${result.csv}`;
+                link.download = `reporte_${new Date().toISOString().split('T')[0]}.csv`;
                 link.click();
-                document.body.removeChild(link);
-                toast({ title: "Éxito", description: "El reporte se ha descargado." });
+                toast({ title: "Éxito", description: "Reporte descargado." });
             } else {
-                 toast({ title: "Información", description: "No hay datos para generar un reporte." });
+                 toast({ title: "Info", description: "Sin datos para reporte." });
             }
-        } catch (error: any) {
-            console.error("Error generating sales report: ", error);
-            toast({ variant: "destructive", title: "Error", description: error.message });
-        } finally {
-            setIsGeneratingReport(false);
-        }
+        } catch (error: any) { toast({ variant: "destructive", title: "Error", description: error.message }); }
+        finally { setIsGeneratingReport(false); }
     };
 
     return (
@@ -159,70 +170,80 @@ function OrderManagementView() {
              <PageHeader>
                 <PageHeaderTitle>Historial de Órdenes</PageHeaderTitle>
                 <PageHeaderActions>
-                    <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={fetchAllOrders}
-                        className="mr-2"
-                    >
+                    <Button variant="outline" size="sm" onClick={fetchAllOrders} disabled={isLoading} className="mr-2">
                         <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     </Button>
-
-                    <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={handleClearOrders} 
-                        disabled={isDeleting || orders.length === 0}
-                        className="mr-2"
-                    >
+                    <Button variant="destructive" size="sm" onClick={handleClearOrders} disabled={isDeleting || orders.length === 0} className="mr-2">
                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                         Limpiar Todo
                     </Button>
-
                     <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isGeneratingReport}>
                         <FileDown className="mr-2 h-4 w-4" />
-                        {isGeneratingReport ? "Generando..." : "Exportar CSV"}
+                        {isGeneratingReport ? "..." : "CSV"}
                     </Button>
                 </PageHeaderActions>
             </PageHeader>
 
-            {isLoading && orders.length === 0 && <p className="p-4 text-muted-foreground">Cargando órdenes...</p>}
-            {error && <p className="p-4 text-destructive">Error al cargar órdenes.</p>}
-            
-            {!isLoading && !error && (
-                <div className="border rounded-lg bg-white">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead>Usuario</TableHead>
-                                <TableHead>Total</TableHead>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Boletos</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {orders?.map((order) => {
+            {/* BARRA DE BÚSQUEDA */}
+            <div className="flex items-center space-x-2 bg-white p-2 rounded-md border max-w-sm">
+                <Search className="h-4 w-4 text-gray-400" />
+                <Input 
+                    placeholder="Buscar por Número de Orden..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-none shadow-none focus-visible:ring-0 h-8"
+                />
+            </div>
+
+            {/* TABLA */}
+            <div className="border rounded-lg bg-white">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Número de Orden</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Usuario</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Boletos</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredOrders.length > 0 ? (
+                            filteredOrders.map((order) => {
+                                const isRefunded = order.status === 'refunded' || order.status === 'cancelled';
                                 const firstTicket = order.tickets?.[0];
-                                const ticketDescription = firstTicket 
+                                const ticketDesc = firstTicket 
                                     ? (firstTicket.tierName ? `${firstTicket.quantity} x ${firstTicket.tierName}` : `${order.tickets.length} x Asiento(s)`)
                                     : 'Sin boletos';
-                                
-                                const isRefunded = order.status === 'refunded' || order.status === 'cancelled';
 
                                 return (
                                 <TableRow key={order.id} className={isRefunded ? "bg-red-50 opacity-70" : ""}>
-                                    <TableCell className="font-mono text-xs">{order.id.slice(-6).toUpperCase()}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="font-mono text-xs font-bold">{order.id}</span>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-4 w-4 text-gray-400 hover:text-black"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(order.id);
+                                                    toast({description: "ID copiado"});
+                                                }}
+                                            >
+                                                <Copy className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
                                     
                                     <TableCell>
                                         <Badge variant={isRefunded ? "destructive" : order.status === 'completed' ? "default" : "secondary"}>
-                                            {isRefunded ? "REEMBOLSADO" : order.status === 'completed' ? "PAGADO" : order.status}
+                                            {isRefunded ? "ANULADA" : order.status === 'completed' ? "PAGADO" : order.status}
                                         </Badge>
                                     </TableCell>
                                     
-                                    <TableCell className="font-mono text-xs max-w-[150px] truncate" title={order.userId}>
+                                    <TableCell className="font-mono text-xs truncate max-w-[150px]" title={order.userId}>
                                         {order.userEmail || order.userId}
                                     </TableCell>
                                     
@@ -235,7 +256,7 @@ function OrderManagementView() {
                                     </TableCell>
                                     
                                     <TableCell>
-                                        <div className="text-xs font-semibold">{ticketDescription}</div>
+                                        <div className="text-xs font-semibold">{ticketDesc}</div>
                                     </TableCell>
 
                                     <TableCell className="text-right">
@@ -244,32 +265,61 @@ function OrderManagementView() {
                                                 variant="ghost" 
                                                 size="sm" 
                                                 className="text-red-600 hover:text-red-700 hover:bg-red-100"
-                                                onClick={() => handleCancelSingleOrder(order.id)}
-                                                disabled={cancellingId === order.id}
-                                                title="Anular Orden y Liberar Asientos"
+                                                onClick={() => openCancelModal(order.id)}
+                                                title="Anular Orden"
                                             >
-                                                {cancellingId === order.id ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Ban className="h-4 w-4" />
-                                                )}
+                                                <Ban className="h-4 w-4 mr-1" /> Anular
                                             </Button>
                                         )}
                                     </TableCell>
                                 </TableRow>
                                 )
-                            })}
-                            {orders?.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">
-                                        No hay órdenes registradas.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
+                            })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center">
+                                    {isLoading ? "Cargando..." : "No se encontraron órdenes."}
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* MODAL DE CONFIRMACIÓN DE ANULACIÓN */}
+            <Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600 flex items-center gap-2">
+                            <Ban className="h-5 w-5" /> Confirmar Anulación
+                        </DialogTitle>
+                        <DialogDescription>
+                            Estás a punto de anular la orden <strong>{orderToCancel}</strong>.
+                            <br />
+                            Esta acción invalidará los boletos y liberará los asientos inmediatamente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4">
+                        <Label htmlFor="reason" className="mb-2 block">Razón de la anulación:</Label>
+                        <Textarea 
+                            id="reason"
+                            placeholder="Ej: Cliente solicitó cambio, Error de cajero..."
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                        />
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)} disabled={isCancelling}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={handleConfirmCancel} disabled={isCancelling || !cancelReason.trim()}>
+                            {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Anulación"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
