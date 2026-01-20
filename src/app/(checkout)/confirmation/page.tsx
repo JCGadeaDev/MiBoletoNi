@@ -9,7 +9,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle, Copy } from "lucide-react"; // Agregué Copy para futuro uso
 
 // Importa tus HOOKS oficiales desde el provider
 import { useFirebase } from "@/firebase/provider";
@@ -31,11 +31,6 @@ export default function ConfirmationPage() {
     if (isUserLoading || !firestore) return;
 
     // 🔎 1. BÚSQUEDA DE REFERENCIA
-    //Prioridad:
-    // 1. customReference (Lo que Fygaro devuelve en la URL como nuestro ID)
-    // 2. custom_reference (Variante snake_case por si acaso)
-    // 3. ref (Nuestro parámetro manual)
-    // 4. reference (Último recurso, porque suele ser el ID interno de Fygaro)
     const urlRef =
       searchParams.get("customReference") ||
       searchParams.get("custom_reference") ||
@@ -46,10 +41,9 @@ export default function ConfirmationPage() {
     setActiveRef(finalReference);
 
     // 🔎 2. REDIRECCIÓN AUTH
-    // Si no hay usuario, lo mandamos a loguear, pero mantenemos la referencia
     if (!user) {
       const redirectRef = finalReference ? `?ref=${finalReference}` : "";
-      router.replace(`/auth?redirect=/confirmation${redirectRef}`);
+      router.replace(`/auth/login?redirect=/confirmation${redirectRef}`);
       return;
     }
 
@@ -76,15 +70,12 @@ export default function ConfirmationPage() {
           } else if (data.status === "failed") {
             setStatus("failed");
           }
-          // Si es 'processing' o 'pending', no hacemos nada (seguimos en loading)
         } else {
-          // El documento no existe aun (webhook lento), seguimos esperando...
           console.log("Esperando creación del documento...");
         }
       },
       (error) => {
         console.error("Error escuchando payment_intent:", error);
-        // Opcional: setStatus('failed') si quieres ser estricto con errores de red
       }
     );
 
@@ -93,7 +84,6 @@ export default function ConfirmationPage() {
 
   // --- RENDERIZADO DE ESTADOS ---
 
-  // 🔎 LÓGICA DE CARGA: Si está cargando usuario O si el status es loading
   if (isUserLoading || status === "loading") {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4 bg-background font-sans">
@@ -102,7 +92,6 @@ export default function ConfirmationPage() {
         <p className="text-lg font-medium animate-pulse text-muted-foreground">
           Confirmando tu transacción con el banco...
         </p>
-        {/* Mostramos la referencia para depuración si existe */}
         {activeRef && <p className="text-xs text-gray-400">Ref: {activeRef}</p>}
       </div>
     );
@@ -155,19 +144,30 @@ export default function ConfirmationPage() {
           </div>
 
           <h1 className="font-headline text-3xl md:text-4xl font-bold">
-            ¡Gracias por tu compra, {user?.displayName?.split(" ")[0]}!
+            ¡Gracias por tu compra, {user?.displayName?.split(" ")[0] || "Usuario"}!
           </h1>
           <p className="mt-4 text-muted-foreground text-lg">
             Tu pago fue procesado con éxito. Prepárate para el evento.
           </p>
 
           {orderId && (
-            <div className="mt-8 p-6 bg-primary/5 rounded-3xl border border-primary/20 inline-block">
+            <div className="mt-8 p-6 bg-primary/5 rounded-3xl border border-primary/20 inline-block w-full max-w-md">
               <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-2">
                 Ticket de Orden
               </p>
-              <p className="text-3xl font-mono font-black text-primary tracking-wider">
-                {orderId.slice(-8).toUpperCase()}
+              {/* ✅ CAMBIO: Mostrar ID completo y ajustar tamaño de fuente para móviles */}
+              <p 
+                className="text-xl sm:text-3xl font-mono font-black text-primary tracking-wider break-all select-all cursor-pointer"
+                title="Haz clic para seleccionar"
+                onClick={() => {
+                   navigator.clipboard.writeText(orderId);
+                   // Aquí podrías poner un toast simple si quisieras
+                }}
+              >
+                {orderId}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                Guarda este código por cualquier reclamo
               </p>
             </div>
           )}

@@ -44,7 +44,7 @@ function TicketVoucherDialog({
 }) {
     const copyToClipboard = () => {
         navigator.clipboard.writeText(order.id);
-        alert("ID de Orden copiado al portapapeles");
+        // Podrías poner un toast aquí
     };
 
     return (
@@ -78,8 +78,9 @@ function TicketVoucherDialog({
                                 onClick={copyToClipboard}
                                 className="bg-zinc-100 border-2 border-dashed border-zinc-300 p-4 rounded-xl cursor-pointer hover:bg-zinc-200 transition-colors group relative"
                             >
-                                <p className="font-mono text-3xl sm:text-4xl font-black tracking-wider text-zinc-900 break-all">
-                                    {order.id.slice(0, 8).toUpperCase()}
+                                {/* AJUSTE: ID Completo y break-all para que no se salga */}
+                                <p className="font-mono text-xl sm:text-3xl font-black tracking-wider text-zinc-900 break-all select-all">
+                                    {order.id}
                                 </p>
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Copy className="h-4 w-4 text-zinc-400" />
@@ -161,7 +162,15 @@ function UpcomingEventCard({ order, userName }: { order: Order & { id: string },
         )
     }
     
-    if (!event || !presentation) return null;
+    // Si la orden existe pero los datos del evento no cargan, mostramos un fallback
+    if (!event || !presentation) {
+        return (
+            <Card className="p-4 border-l-4 border-l-gray-300 mb-4 bg-muted/20">
+               <p className="text-sm font-medium">Evento no disponible o eliminado.</p>
+               <p className="text-xs text-muted-foreground">Orden ID: {order.id}</p>
+            </Card>
+        );
+    }
 
     const firstTicket = order.tickets?.[0];
     const ticketDescription = firstTicket?.tierName 
@@ -209,8 +218,9 @@ function UpcomingEventCard({ order, userName }: { order: Order & { id: string },
                 <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                     <div className="flex flex-col">
                         <p className="text-[10px] uppercase text-muted-foreground font-bold">Referencia de Orden</p>
-                        <p className="text-sm font-mono text-foreground font-semibold">
-                            #{order.id.slice(0,8).toUpperCase()}
+                        {/* AJUSTE: ID Completo */}
+                        <p className="text-sm font-mono text-foreground font-semibold break-all">
+                            #{order.id}
                         </p>
                     </div>
                     
@@ -248,7 +258,9 @@ export default function MyTicketsPage() {
             if (!firestore || !user) return;
             setLoadingOrders(true);
             try {
-                // CORRECCIÓN: Filtrar por status 'completed'
+                // ⚠️ SI NO TE SALEN DATOS:
+                // Revisa la consola del navegador, Firebase te pedirá crear un ÍNDICE COMPUESTO.
+                // Haz clic en el link que aparece en el error de la consola.
                 const path = `users/${user.uid}/orders`;
                 const q = query(
                     collection(firestore, path), 
@@ -264,7 +276,7 @@ export default function MyTicketsPage() {
 
                 setOrders(loadedOrders);
             } catch (err) {
-                console.error("Error cargando boletos:", err);
+                console.error("Error cargando boletos (Posible falta de Índice):", err);
             } finally {
                 setLoadingOrders(false);
             }

@@ -15,12 +15,40 @@ export async function POST(request: Request) {
         // 1. Decodificación
         const data = jwt.verify(outerPayload.jwt, secret) as any;
         
-        // 2. Mapeo de Referencias (Capturamos el ID de Firestore que vimos en los logs)
+        // 2. Mapeo de Referencias
         const reference = data.custom_reference || data.customReference || data.remote_id;
         const fygaroReference = data.reference || data.id;
 
-        // 3. Lógica de Éxito (Si hay referencias y no hay error, es un éxito)
+        // 3. Análisis de Estado
         const responseMsg = String(data.response_message || data.status || '').toLowerCase();
+        
+        // --- DETECCIÓN DE REEMBOLSO / VOID ---
+        const isVoided = responseMsg.includes('void') || responseMsg.includes('refund');
+
+        if (reference && isVoided) {
+             console.log(`🚫 [WEBHOOK] Detectada anulación para: ${reference}`);
+             
+             const intentRef = adminDb.collection('payment_intents').doc(reference);
+             const intentDoc = await intentRef.get();
+             
+             if (intentDoc.exists && intentDoc.data()?.orderId) {
+                 const orderId = intentDoc.data()?.orderId;
+                 
+                 // Liberar asientos
+                 await ticketService.cancelOrder(orderId);
+                 
+                 await intentRef.update({ 
+                     status: 'refunded',
+                     updatedAt: FieldValue.serverTimestamp() 
+                 });
+                 
+                 console.log(`✅ [WEBHOOK] Orden ${orderId} reembolsada exitosamente.`);
+                 return NextResponse.json({ success: true, message: 'Order refunded' });
+             }
+             return NextResponse.json({ message: 'Order logic not found for refund' });
+        }
+
+        // --- LÓGICA DE ÉXITO (VENTA) ---
         const isError = responseMsg.includes('error') || responseMsg.includes('declined');
         const isSuccess = (reference && fygaroReference && !isError);
 
@@ -40,19 +68,18 @@ export async function POST(request: Request) {
                     lastWebhookAt: FieldValue.serverTimestamp(),
                 });
 
-                return { intentData }; // Retornamos el objeto con los datos
+                return { intentData };
             });
 
-            // --- SOLUCIÓN AL ERROR DE UNDEFINED ---
+            if (transactionResult === 'NOT_FOUND') return NextResponse.json({ error: 'Not found' }, { status: 404 });
+            if (transactionResult === 'ALREADY_DONE') return NextResponse.json({ received: true });
+
             if (typeof transactionResult === 'object' && transactionResult !== null) {
-                // Forzamos a TS a entender que intentData existe
-                const intent = transactionResult.intentData as any;
+                const intent = (transactionResult as any).intentData;
 
-                if (!intent || !intent.purchaseData) {
-                    throw new Error("Datos de compra no encontrados en el intent");
-                }
+                if (!intent || !intent.purchaseData) throw new Error("Datos corruptos");
 
-                // 4. Finalizar compra y generar tickets
+                // Finalizar compra
                 const result = await ticketService.finalizePurchase(
                     intent.userId,
                     intent.purchaseData.presentationId,
@@ -63,18 +90,15 @@ export async function POST(request: Request) {
                     intent.userPhone || ''
                 );
 
-                // 5. Actualizar estado final
                 await intentRef.update({
                     status: 'completed',
                     orderId: result.orderId,
                     updatedAt: FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ [WEBHOOK] ¡TRANSACCIÓN COMPLETADA! Orden: ${result.orderId}`);
+                console.log(`✅ [WEBHOOK] ¡ORDEN FINALIZADA! ID: ${result.orderId}`);
                 return NextResponse.json({ success: true, orderId: result.orderId });
             }
-
-            return NextResponse.json({ message: transactionResult });
         }
 
         return NextResponse.json({ received: true, message: 'Conditions not met' });
