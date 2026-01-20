@@ -4,13 +4,22 @@ import type { Timestamp } from 'firebase/firestore';
 // Generic type to add Firestore ID to any type
 export type WithId<T> = T & { id: string };
 
-// Firestore collection types
+// --- 1. DEFINICIÓN DE BOLETOS (Helper para Orden) ---
+export interface TicketPayload {
+  tierId?: string;      // Para boletos generales
+  seatId?: string;      // Para asientos numerados
+  quantity?: number;
+  tierName?: string;
+  price?: number;
+}
+
+// --- 2. FIRESTORE COLLECTION TYPES ---
+
 export type Event = {
   name: string;
   category: 'Conciertos y Festivales' | 'Teatro' | 'Deportes' | 'Expo y Ferias' | string;
   description?: string;
   imageUrl?: string;
-  // Agregamos artist opcional por si viene de la DB
   artist?: string;
 };
 
@@ -59,21 +68,32 @@ export type User = {
   createdAt?: Timestamp;
 };
 
+// --- ORDEN ACTUALIZADA (Sincronizada con TicketService y Admin) ---
 export type Order = {
   id: string;
   userId: string;
+  userEmail?: string;   // Nuevo: Para mostrar en Admin
+  userPhone?: string;   // Nuevo: Para contacto
+  
   presentationId: string;
-  totalPrice: number;
-  currency: 'NIO' | 'USD';
-  purchaseDate: Timestamp;
-  tickets: Array<any>;
-  quantity: number;
-  paymentStatus: string;
   eventId?: string;
+  eventName?: string;   // Nuevo: Para mostrar el nombre del evento sin hacer fetch extra
+  
+  totalPrice: number;
+  currency: string;     // Cambiado a string para flexibilidad o mantén 'NIO' | 'USD'
+  
+  purchaseDate: Timestamp;
+  
+  tickets: TicketPayload[]; // Ahora usa el tipo estricto en lugar de Array<any>
+  
+  // Estados actualizados incluyendo los de reembolso
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+  
+  paymentMethod?: string; // ej: 'fygaro'
+  quantity?: number;      // Opcional, ya que podemos sacar el total de tickets.length
 }
 
 // --- Types for Frontend Combination & Display ---
-// ESTA ES LA INTERFAZ QUE USA EVENTCARD
 export interface CombinedEvent {
   id: string; 
   name: string;
@@ -93,7 +113,6 @@ export interface CombinedEvent {
   minPrice?: number;  // Para mostrar "Desde $25"
 }
 
-
 export type BlogPost = {
   id: string;
   title: string;
@@ -103,7 +122,6 @@ export type BlogPost = {
   excerpt: string;
   category: 'Música' | 'Entrevistas' | 'Guías' | 'Detrás de Escena';
 };
-
 
 // User Management Flow Schemas and Types
 export const DeleteUserInputSchema = z.object({
@@ -116,7 +134,6 @@ export const DeleteUserOutputSchema = z.object({
   message: z.string(),
 });
 export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
-
 
 export const SetUserRoleInputSchema = z.object({
   userId: z.string().describe('The UID of the user to modify.'),
