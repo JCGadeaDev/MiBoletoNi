@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, PlusCircle, Trash2, Loader2 } from 'lucide-react'; // Agregamos iconos
+import { ArrowLeft, PlusCircle, Loader2, MapPin, Clock, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,306 +11,244 @@ import { collection, query } from 'firebase/firestore';
 import type { Event, Venue, Presentation } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { motion } from "framer-motion";
 
-// --- IMPORTACIONES NUEVAS PARA ELIMINAR ---
-import { deleteEventAction, deleteVenueAction } from '@/app/actions/admin-delete';
+// --- IMPORTACIONES DE ACCIONES (Usando Alias @ para evitar errores de ruta) ---
+import { deleteEventAction, deleteVenueAction, deletePresentationAction } from '@/app/actions/admin-delete';
 import { useToast } from '@/hooks/use-toast';
+import { DeleteConfirmDialog } from '@/components/pages/admin/DeleteConfirmDialog';
 
-// --- Componente para la lista de Eventos ---
+// --- LISTA DE EVENTOS ---
 function EventsList() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [deletingId, setDeletingId] = useState<string | null>(null); // Estado para loading individual
-
     const eventsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'events')) : null, [firestore]);
-    const { data: events, isLoading, error } = useCollection<Event>(eventsQuery);
+    const { data: events, isLoading } = useCollection<Event>(eventsQuery);
 
-    // --- LÓGICA DE ELIMINAR EVENTO ---
-    const handleDelete = async (eventId: string, eventName: string) => {
-        const confirm = window.confirm(`⚠️ ¿Estás seguro de eliminar el evento "${eventName}"?\n\nEsta acción es irreversible.`);
-        if (!confirm) return;
-
-        setDeletingId(eventId);
-        try {
-            const result = await deleteEventAction(eventId);
-            if (result.success) {
-                toast({ title: "Evento eliminado", description: "El evento ha sido borrado correctamente." });
-                // Al usar hooks de Firebase en tiempo real, la lista se actualizará sola
-            } else {
-                toast({ variant: "destructive", title: "Error", description: result.error });
-            }
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Fallo de conexión." });
-        } finally {
-            setDeletingId(null);
-        }
+    const onConfirmDelete = async (id: string) => {
+        const res = await deleteEventAction(id);
+        if (res.success) toast({ title: "Evento eliminado" });
+        else toast({ variant: "destructive", title: "Error", description: res.error });
     };
 
-    if (isLoading) return <p>Cargando eventos...</p>;
-    if (error) return <p className="text-destructive">Error al cargar eventos: {error.message}</p>;
+    if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary h-8 w-8" /></div>;
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Todos los Eventos</CardTitle>
-                <CardDescription>Conceptos base de eventos.</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nombre</TableHead>
+                            <TableHead className="pl-6">Nombre del Evento</TableHead>
                             <TableHead>Categoría</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                            <TableHead className="text-right pr-6">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {events?.map((event) => (
-                            <TableRow key={event.id}>
-                                <TableCell className="font-medium">{event.name}</TableCell>
-                                <TableCell>
-                                    <Badge variant="secondary">{event.category}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
+                            <TableRow key={event.id} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="font-medium pl-6">{event.name}</TableCell>
+                                <TableCell><Badge variant="outline" className="capitalize">{event.category}</Badge></TableCell>
+                                <TableCell className="text-right pr-6">
                                     <div className="flex justify-end gap-2">
                                         <Button variant="outline" size="sm" asChild>
                                             <Link href={`/admin/events/${event.id}/edit`}>Editar</Link>
                                         </Button>
-                                        
-                                        {/* BOTÓN ELIMINAR */}
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => handleDelete(event.id, event.name)}
-                                            disabled={deletingId === event.id}
-                                        >
-                                            {deletingId === event.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
+                                        <DeleteConfirmDialog 
+                                            itemName={event.name}
+                                            title="¿Eliminar Evento?"
+                                            description="Se borrará el evento"
+                                            onConfirm={() => onConfirmDelete(event.id)}
+                                        />
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-                {events?.length === 0 && <p className="p-4 text-center text-muted-foreground">No se encontraron eventos.</p>}
             </CardContent>
         </Card>
     );
 }
 
-// --- Componente para la lista de Recintos ---
+// --- LISTA DE RECINTOS ---
 function VenuesList() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [deletingId, setDeletingId] = useState<string | null>(null);
-
     const venuesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'venues')) : null, [firestore]);
-    const { data: venues, isLoading, error } = useCollection<Venue>(venuesQuery);
+    const { data: venues, isLoading } = useCollection<Venue>(venuesQuery);
 
-    // --- LÓGICA DE ELIMINAR RECINTO ---
-    const handleDelete = async (venueId: string, venueName: string) => {
-        const confirm = window.confirm(`⚠️ ¿Eliminar recinto "${venueName}"?\n\nSi hay eventos activos aquí, verifica antes de borrar.`);
-        if (!confirm) return;
-
-        setDeletingId(venueId);
-        try {
-            const result = await deleteVenueAction(venueId);
-            if (result.success) {
-                toast({ title: "Recinto eliminado", description: "El lugar ha sido borrado." });
-            } else {
-                toast({ variant: "destructive", title: "Error", description: result.error });
-            }
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Fallo de conexión." });
-        } finally {
-            setDeletingId(null);
-        }
+    const onConfirmDelete = async (id: string) => {
+        const res = await deleteVenueAction(id);
+        if (res.success) toast({ title: "Recinto eliminado" });
+        else toast({ variant: "destructive", title: "Error", description: res.error });
     };
 
-    if (isLoading) return <p>Cargando recintos...</p>;
-    if (error) return <p className="text-destructive">Error al cargar recintos: {error.message}</p>;
+    if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary h-8 w-8" /></div>;
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Todos los Recintos</CardTitle>
-                <CardDescription>Lugares donde se realizan los eventos.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <Table>
+        <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-0">
+                <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nombre del Recinto</TableHead>
+                            <TableHead className="pl-6">Recinto</TableHead>
                             <TableHead>Ciudad</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                            <TableHead className="text-right pr-6">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {venues?.map((venue) => (
                             <TableRow key={venue.id}>
-                                <TableCell className="font-medium">{venue.name}</TableCell>
+                                <TableCell className="font-medium pl-6">{venue.name}</TableCell>
                                 <TableCell>{venue.city}</TableCell>
-                                <TableCell>
-                                    <Badge variant={venue.type === 'numbered' ? 'default' : 'outline'}>
-                                        {venue.type === 'numbered' ? 'Numerado' : 'General'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-right pr-6">
                                     <div className="flex justify-end gap-2">
                                         <Button variant="outline" size="sm" asChild>
                                             <Link href={`/admin/venues/${venue.id}/edit`}>Editar</Link>
                                         </Button>
-
-                                        {/* BOTÓN ELIMINAR */}
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => handleDelete(venue.id, venue.name)}
-                                            disabled={deletingId === venue.id}
-                                        >
-                                            {deletingId === venue.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-4 w-4" />
-                                            )}
-                                        </Button>
+                                        <DeleteConfirmDialog 
+                                            itemName={venue.name}
+                                            title="¿Eliminar Recinto?"
+                                            description="Se borrará el lugar"
+                                            onConfirm={() => onConfirmDelete(venue.id)}
+                                        />
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-                 {venues?.length === 0 && <p className="p-4 text-center text-muted-foreground">No se encontraron recintos.</p>}
             </CardContent>
         </Card>
     );
 }
 
-// --- Componente para la lista de Presentaciones ---
-// (Este queda igual, solo visualización y gestión, sin borrado directo por seguridad de órdenes)
+// --- LISTA DE PRESENTACIONES ---
 function PresentationsList() {
     const firestore = useFirestore();
-
+    const { toast } = useToast();
     const presentationsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'presentations')) : null, [firestore]);
     const eventsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'events')) : null, [firestore]);
-    const venuesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'venues')) : null, [firestore]);
-
-    const { data: presentations, isLoading: presentationsLoading, error: presentationsError } = useCollection<Presentation>(presentationsQuery);
-    const { data: events, isLoading: eventsLoading, error: eventsError } = useCollection<Event>(eventsQuery);
-    const { data: venues, isLoading: venuesLoading, error: venuesError } = useCollection<Venue>(venuesQuery);
-
-    const isLoading = presentationsLoading || eventsLoading || venuesLoading;
-    const error = presentationsError || eventsError || venuesError;
-
+    const { data: presentations, isLoading } = useCollection<Presentation>(presentationsQuery);
+    const { data: events } = useCollection<Event>(eventsQuery);
     const eventMap = useMemo(() => new Map(events?.map(e => [e.id, e.name])), [events]);
-    const venueMap = useMemo(() => new Map(venues?.map(v => [v.id, v.name])), [venues]);
 
-    if (isLoading) return <p>Cargando presentaciones...</p>;
-    if (error) return <p className="text-destructive">Error al cargar datos: {error.message}</p>;
+    const onConfirmDelete = async (eventId: string, presId: string) => {
+        const res = await deletePresentationAction(eventId, presId);
+        if (res.success) toast({ title: "Función eliminada" });
+        else toast({ variant: "destructive", title: "Error" });
+    };
+
+    if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary h-8 w-8" /></div>;
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Todas las Presentaciones</CardTitle>
-                <CardDescription>Instancias específicas de un evento.</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-0">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Evento</TableHead>
-                            <TableHead>Recinto</TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                            <TableHead className="pl-6">Evento</TableHead>
+                            <TableHead>Fecha / Hora</TableHead>
+                            <TableHead className="text-right pr-6">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {presentations?.map((p) => (
-                             <TableRow key={p.id}>
-                                <TableCell className="font-medium">{eventMap.get(p.eventId) || p.eventId}</TableCell>
-                                <TableCell>{venueMap.get(p.venueId) || p.venueId}</TableCell>
-                                <TableCell>{p.eventDate?.toDate().toLocaleString('es-NI', { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
-                                <TableCell>
-                                    <Badge variant={p.status === 'A la venta' ? 'default' : 'destructive'}>{p.status}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/admin/presentations/${p.id}`}>Gestionar</Link>
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        {presentations?.map((p) => {
+                            const eventName = eventMap.get(p.eventId) || 'Evento Desconocido';
+                            const dateStr = p.eventDate?.toDate().toLocaleString('es-NI', { dateStyle: 'short', timeStyle: 'short' }) || "";
+                            return (
+                                <TableRow key={p.id}>
+                                    <TableCell className="font-medium pl-6">{eventName}</TableCell>
+                                    <TableCell>{dateStr}</TableCell>
+                                    <TableCell className="text-right pr-6">
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/admin/presentations/${p.id}`}>Ver</Link>
+                                            </Button>
+                                            <DeleteConfirmDialog 
+                                                itemName={`${eventName} (${dateStr})`}
+                                                title="¿Borrar Presentación?"
+                                                description="Se eliminará esta función del calendario"
+                                                onConfirm={() => onConfirmDelete(p.eventId, p.id)}
+                                            />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
-                {presentations?.length === 0 && <p className="p-4 text-center text-muted-foreground">No se encontraron presentaciones.</p>}
             </CardContent>
         </Card>
     );
 }
 
-// --- Componente Principal de la Página ---
+// --- PÁGINA PRINCIPAL ---
 export default function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState('events');
 
-    const getActionProps = () => {
+    const actionData = useMemo(() => {
         switch (activeTab) {
-            case 'events': 
-                return { title: 'Nuevo Evento', href: '/admin/events/new' };
-            case 'venues': 
-                return { title: 'Nuevo Recinto', href: '/admin/venues/new' };
-            case 'presentations': 
-                return { title: 'Nueva Presentación', href: '/admin/presentations/new' };
-            default: 
-                return { title: 'Crear Nuevo', href: '#' };
+            case 'events': return { title: 'Nuevo Evento', href: '/admin/events/new' };
+            case 'venues': return { title: 'Nuevo Recinto', href: '/admin/venues/new' };
+            case 'presentations': return { title: 'Nueva Función', href: '/admin/presentations/new' };
+            default: return { title: 'Crear', href: '#' };
         }
-    };
-
-    const { title, href } = getActionProps();
+    }, [activeTab]);
 
     return (
-        <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-            <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-bold tracking-tight">Gestión de Eventos</h1>
-                    <p className="text-muted-foreground">Crea, edita y administra eventos, recintos y presentaciones.</p>
+        <div className="w-full min-h-screen bg-muted/20 flex flex-col items-center pb-20">
+            {/* Header de la sección */}
+            <header className="w-full bg-white border-b py-10 flex justify-center mb-8">
+                <div className="w-full max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="text-center md:text-left">
+                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900">Configuración de Cartelera</h1>
+                        <p className="text-muted-foreground mt-1 text-lg">Gestiona eventos, locales y fechas disponibles.</p>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button variant="ghost" asChild className="rounded-full">
+                            <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Volver</Link>
+                        </Button>
+                        <Button asChild className="rounded-full bg-primary shadow-lg hover:bg-primary/90 transition-all">
+                            <Link href={actionData.href}><PlusCircle className="mr-2 h-4 w-4" /> {actionData.title}</Link>
+                        </Button>
+                    </div>
                 </div>
-                 <div className="flex items-center space-x-2">
-                     <Button variant="ghost" asChild>
-                        <Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Regresar al Panel</Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href={href}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            {title}
-                        </Link>
-                    </Button>
-                 </div>
-            </div>
+            </header>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="events">Eventos</TabsTrigger>
-                    <TabsTrigger value="venues">Recintos</TabsTrigger>
-                    <TabsTrigger value="presentations">Presentaciones</TabsTrigger>
-                </TabsList>
-                <TabsContent value="events">
-                    <EventsList />
-                </TabsContent>
-                <TabsContent value="venues">
-                    <VenuesList />
-                </TabsContent>
-                <TabsContent value="presentations">
-                    <PresentationsList />
-                </TabsContent>
-            </Tabs>
+            {/* Contenedor Principal Centrado */}
+            <main className="w-full max-w-6xl mx-auto px-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="bg-white border shadow-sm p-1 rounded-lg">
+                        <TabsTrigger value="events" className="px-6">Eventos</TabsTrigger>
+                        <TabsTrigger value="venues" className="px-6">Recintos</TabsTrigger>
+                        <TabsTrigger value="presentations" className="px-6">Presentaciones</TabsTrigger>
+                    </TabsList>
+
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <TabsContent value="events" className="mt-0"><EventsList /></TabsContent>
+                        <TabsContent value="venues" className="mt-0"><VenuesList /></TabsContent>
+                        <TabsContent value="presentations" className="mt-0"><PresentationsList /></TabsContent>
+                    </motion.div>
+                </Tabs>
+
+                {/* Pie de página de soporte */}
+                <section className="mt-20 p-10 rounded-3xl bg-gradient-to-br from-primary/5 to-purple-500/5 border border-primary/10 text-center max-w-4xl mx-auto">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">¿Necesitas soporte técnico?</h3>
+                    <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+                        Si tienes inconvenientes con el borrado de datos o necesitas asistencia avanzada con la plataforma, nuestro equipo está disponible.
+                    </p>
+                    <Button asChild variant="default" className="rounded-full px-10 py-6 h-auto text-lg shadow-md">
+                        <Link href="/contact">Contactar al Administrador</Link>
+                    </Button>
+                </section>
+            </main>
         </div>
     );
 }

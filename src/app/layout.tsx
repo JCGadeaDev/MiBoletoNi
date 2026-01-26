@@ -6,12 +6,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Inter } from 'next/font/google'; 
 
-// --- CORRECCIÓN DE IMPORTACIONES ---
-// 1. Usamos { } porque son exportaciones nombradas (export function Header)
-// 2. Cambiamos 'Navbar' por 'Header' que es el componente que me mostraste
-import { Header } from '@/components/layout/header'; 
-import { Footer } from '@/components/layout/footer';
-
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-inter',
@@ -39,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body 
-        className={`${inter.variable} font-sans antialiased min-h-screen flex flex-col bg-background text-foreground`} 
+        className={`${inter.variable} font-sans antialiased min-h-screen bg-background text-foreground`} 
         suppressHydrationWarning
       >
         <ThemeProvider
@@ -50,20 +44,17 @@ export default function RootLayout({
         >
           <FirebaseClientProvider>
             
-            {/* 1. HEADER (Tu componente Header.tsx) */}
-            <Header />
-            
-            {/* 2. CONTENIDO PRINCIPAL */}
-            <main className="flex-1 w-full flex flex-col relative"> 
+            {/* IMPORTANTE: 
+                Aquí ya NO hay Header ni Footer. 
+                Se renderizarán automáticamente según el Layout del grupo 
+                donde se encuentre la página ((main) o (admin)).
+            */}
+            <div className="relative flex min-h-screen flex-col">
               {children}
-            </main>
+            </div>
             
-            {/* 3. TOASTS */}
             <Toaster />
 
-            {/* 4. FOOTER (Tu componente Footer.tsx) */}
-            <Footer />
-            
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>

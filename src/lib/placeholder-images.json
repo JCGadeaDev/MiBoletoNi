@@ -55,24 +55,6 @@
       "imageHint": "food festival"
     },
     {
-      "id": "blog-1",
-      "description": "A guide to the best concerts in Nicaragua.",
-      "imageUrl": "https://images.unsplash.com/photo-1735368315970-284d0a6b8825?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjb25jZXJ0JTIwZ3VpZGV8ZW58MHx8fHwxNzU5NzQ2NzY2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "concert guide"
-    },
-    {
-      "id": "blog-2",
-      "description": "An interview with a local artist.",
-      "imageUrl": "https://images.unsplash.com/photo-1637761566180-9dbde4fdab77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhcnRpc3QlMjBpbnRlcnZpZXd8ZW58MHx8fHwxNzU5Njk1NzU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "artist interview"
-    },
-    {
-      "id": "blog-3",
-      "description": "What to do this weekend in Granada.",
-      "imageUrl": "https://images.unsplash.com/photo-1721244653529-8684921faaa7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjaXR5JTIwZ3VpZGV8ZW58MHx8fHwxNzU5NzQ2NzY1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "city guide"
-    },
-    {
       "id": "organizer-hero",
       "description": "An event organizer managing an event.",
       "imageUrl": "https://images.unsplash.com/photo-1620735691646-84f8e52db125?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxldmVudCUyMG9yZ2FuaXplcnxlbnwwfHx8fDE3NTk2NjUwMTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
@@ -113,12 +95,6 @@
       "description": "Abstract image with question marks for the FAQ page.",
       "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHF1ZXN0aW9uJTIwbWFya3xlbnwwfHx8fDE3NjA0MzQ2MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "abstract question"
-    },
-    {
-      "id": "blog-hero",
-      "description": "A person writing in a journal, representing a blog or magazine.",
-      "imageUrl": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxibG9nJTIwd3JpdGluZ3xlbnwwfHx8fDE3NjA0MzQ2MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "writing book"
     }
   ]
 }

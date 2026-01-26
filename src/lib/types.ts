@@ -113,16 +113,6 @@ export interface CombinedEvent {
   minPrice?: number;  // Para mostrar "Desde $25"
 }
 
-export type BlogPost = {
-  id: string;
-  title: string;
-  author: string;
-  date: string;
-  image: string;
-  excerpt: string;
-  category: 'Música' | 'Entrevistas' | 'Guías' | 'Detrás de Escena';
-};
-
 // User Management Flow Schemas and Types
 export const DeleteUserInputSchema = z.object({
   userId: z.string().describe('The UID of the user to delete.'),

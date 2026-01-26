@@ -85,7 +85,7 @@ export function Footer() {
                 <ul className="space-y-2">
                     <li><Link href="/about" className="text-base text-muted-foreground hover:text-primary transition-colors">Quienes Somos</Link></li>
                     <li><Link href="/puntos-de-venta" className="text-base text-muted-foreground hover:text-primary transition-colors">Puntos de Venta</Link></li>
-                    <li><Link href="/blog" className="text-base text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>
+                   <li><Link href="/auth/login" className="text-base text-muted-foreground hover:text-primary transition-colors">Mi Cuenta</Link></li>
                 </ul>
             </div>
             <div>
@@ -93,7 +93,6 @@ export function Footer() {
                 <ul className="space-y-2">
                     <li><Link href="/contact" className="text-base text-muted-foreground hover:text-primary transition-colors">Contacto</Link></li>
                     <li><Link href="/faq" className="text-base text-muted-foreground hover:text-primary transition-colors">Preguntas Frecuentes</Link></li>
-                    <li><Link href="/auth/login" className="text-base text-muted-foreground hover:text-primary transition-colors">Mi Cuenta</Link></li>
                 </ul>
             </div>
             <div>
