@@ -238,16 +238,7 @@ export default function AdminEventsPage() {
                     </motion.div>
                 </Tabs>
 
-                {/* Pie de página de soporte */}
-                <section className="mt-20 p-10 rounded-3xl bg-gradient-to-br from-primary/5 to-purple-500/5 border border-primary/10 text-center max-w-4xl mx-auto">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2">¿Necesitas soporte técnico?</h3>
-                    <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-                        Si tienes inconvenientes con el borrado de datos o necesitas asistencia avanzada con la plataforma, nuestro equipo está disponible.
-                    </p>
-                    <Button asChild variant="default" className="rounded-full px-10 py-6 h-auto text-lg shadow-md">
-                        <Link href="/contact">Contactar al Administrador</Link>
-                    </Button>
-                </section>
+                
             </main>
         </div>
     );
