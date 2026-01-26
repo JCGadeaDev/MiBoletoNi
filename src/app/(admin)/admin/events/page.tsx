@@ -1,23 +1,50 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Loader2 } from 'lucide-react'; // Agregamos iconos
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { Event, Venue, Presentation, WithId } from '@/lib/types';
+import type { Event, Venue, Presentation } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+
+// --- IMPORTACIONES NUEVAS PARA ELIMINAR ---
+import { deleteEventAction, deleteVenueAction } from '@/app/actions/admin-delete';
+import { useToast } from '@/hooks/use-toast';
 
 // --- Componente para la lista de Eventos ---
 function EventsList() {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [deletingId, setDeletingId] = useState<string | null>(null); // Estado para loading individual
+
     const eventsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'events')) : null, [firestore]);
     const { data: events, isLoading, error } = useCollection<Event>(eventsQuery);
+
+    // --- LÓGICA DE ELIMINAR EVENTO ---
+    const handleDelete = async (eventId: string, eventName: string) => {
+        const confirm = window.confirm(`⚠️ ¿Estás seguro de eliminar el evento "${eventName}"?\n\nEsta acción es irreversible.`);
+        if (!confirm) return;
+
+        setDeletingId(eventId);
+        try {
+            const result = await deleteEventAction(eventId);
+            if (result.success) {
+                toast({ title: "Evento eliminado", description: "El evento ha sido borrado correctamente." });
+                // Al usar hooks de Firebase en tiempo real, la lista se actualizará sola
+            } else {
+                toast({ variant: "destructive", title: "Error", description: result.error });
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Fallo de conexión." });
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     if (isLoading) return <p>Cargando eventos...</p>;
     if (error) return <p className="text-destructive">Error al cargar eventos: {error.message}</p>;
@@ -26,7 +53,7 @@ function EventsList() {
         <Card>
             <CardHeader>
                 <CardTitle>Todos los Eventos</CardTitle>
-                <CardDescription>Conceptos base de eventos. Cada uno puede tener múltiples presentaciones.</CardDescription>
+                <CardDescription>Conceptos base de eventos.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -45,9 +72,26 @@ function EventsList() {
                                     <Badge variant="secondary">{event.category}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/admin/events/${event.id}/edit`}>Editar</Link>
-                                    </Button>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/admin/events/${event.id}/edit`}>Editar</Link>
+                                        </Button>
+                                        
+                                        {/* BOTÓN ELIMINAR */}
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => handleDelete(event.id, event.name)}
+                                            disabled={deletingId === event.id}
+                                        >
+                                            {deletingId === event.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -62,8 +106,31 @@ function EventsList() {
 // --- Componente para la lista de Recintos ---
 function VenuesList() {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
     const venuesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'venues')) : null, [firestore]);
     const { data: venues, isLoading, error } = useCollection<Venue>(venuesQuery);
+
+    // --- LÓGICA DE ELIMINAR RECINTO ---
+    const handleDelete = async (venueId: string, venueName: string) => {
+        const confirm = window.confirm(`⚠️ ¿Eliminar recinto "${venueName}"?\n\nSi hay eventos activos aquí, verifica antes de borrar.`);
+        if (!confirm) return;
+
+        setDeletingId(venueId);
+        try {
+            const result = await deleteVenueAction(venueId);
+            if (result.success) {
+                toast({ title: "Recinto eliminado", description: "El lugar ha sido borrado." });
+            } else {
+                toast({ variant: "destructive", title: "Error", description: result.error });
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Fallo de conexión." });
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     if (isLoading) return <p>Cargando recintos...</p>;
     if (error) return <p className="text-destructive">Error al cargar recintos: {error.message}</p>;
@@ -95,9 +162,26 @@ function VenuesList() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                     <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/admin/venues/${venue.id}/edit`}>Editar</Link>
-                                    </Button>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/admin/venues/${venue.id}/edit`}>Editar</Link>
+                                        </Button>
+
+                                        {/* BOTÓN ELIMINAR */}
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => handleDelete(venue.id, venue.name)}
+                                            disabled={deletingId === venue.id}
+                                        >
+                                            {deletingId === venue.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -110,10 +194,10 @@ function VenuesList() {
 }
 
 // --- Componente para la lista de Presentaciones ---
+// (Este queda igual, solo visualización y gestión, sin borrado directo por seguridad de órdenes)
 function PresentationsList() {
     const firestore = useFirestore();
 
-    // Hooks para cargar todas las colecciones necesarias
     const presentationsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'presentations')) : null, [firestore]);
     const eventsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'events')) : null, [firestore]);
     const venuesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'venues')) : null, [firestore]);
@@ -125,7 +209,6 @@ function PresentationsList() {
     const isLoading = presentationsLoading || eventsLoading || venuesLoading;
     const error = presentationsError || eventsError || venuesError;
 
-    // Crear mapas para búsqueda rápida de nombres
     const eventMap = useMemo(() => new Map(events?.map(e => [e.id, e.name])), [events]);
     const venueMap = useMemo(() => new Map(venues?.map(v => [v.id, v.name])), [venues]);
 
@@ -136,7 +219,7 @@ function PresentationsList() {
         <Card>
             <CardHeader>
                 <CardTitle>Todas las Presentaciones</CardTitle>
-                <CardDescription>Instancias específicas de un evento en un lugar y fecha determinados.</CardDescription>
+                <CardDescription>Instancias específicas de un evento.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -173,9 +256,7 @@ function PresentationsList() {
     );
 }
 
-
 // --- Componente Principal de la Página ---
-
 export default function AdminEventsPage() {
     const [activeTab, setActiveTab] = useState('events');
 
