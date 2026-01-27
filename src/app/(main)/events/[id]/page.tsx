@@ -1,18 +1,18 @@
 'use client';
+
 import Image from 'next/image';
 import { notFound, useParams, useRouter } from 'next/navigation';
-import { Calendar, MapPin, Ticket, LockKeyhole, ArrowRight, Loader2 } from 'lucide-react'; // Añadidos iconos
+import { Calendar, MapPin, Ticket, LockKeyhole, ArrowRight, Loader2, Info, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase'; // Añadido useUser
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Event, Presentation, PricingTier, Seat, Venue, WithId } from '@/lib/types';
 import { useState, useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 type PriceInfo = {
@@ -21,6 +21,7 @@ type PriceInfo = {
     currency: string;
 } | null;
 
+// --- COMPONENTE: TARJETA DE SELECCIÓN DE TICKETS ---
 function TicketSelectionCard({ 
     event, 
     presentations, 
@@ -36,7 +37,7 @@ function TicketSelectionCard({
 }) {
     const router = useRouter();
     const { toast } = useToast();
-    const { user, isUserLoading } = useUser(); // Obtenemos el estado del usuario
+    const { user, isUserLoading } = useUser();
     
     const availablePresentations = useMemo(() => 
         presentations?.filter(p => p.status === 'A la venta').sort((a,b) => a.eventDate.toMillis() - b.eventDate.toMillis()) || [], 
@@ -79,109 +80,94 @@ function TicketSelectionCard({
     }, [priceInfo]);
 
     return (
-        <Card className="shadow-lg sticky top-24 self-start border-primary/10 overflow-hidden">
-            {/* Línea decorativa superior */}
-            <div className="h-1.5 bg-primary w-full" />
+        <Card className="shadow-2xl sticky top-24 self-start border-none rounded-[2.5rem] overflow-hidden bg-white">
+            <div className="h-2 bg-primary w-full" />
             
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Compra tus Boletos</CardTitle>
-              <CardDescription>Reserva tu lugar en este evento.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="font-black text-2xl tracking-tight">Compra tus Boletos</CardTitle>
+              <CardDescription>Reserva tu lugar ahora.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                   <div>
-                      <label className="font-semibold text-sm text-foreground mb-1.5 block">1. Elige la Presentación</label>
+                      <label className="font-bold text-xs text-muted-foreground uppercase mb-2 block ml-1">Fecha y Lugar</label>
                       <Select 
                           value={selectedPresentationId || ''} 
                           onValueChange={setSelectedPresentationId}
                           disabled={availablePresentations.length === 0}
                       >
-                          <SelectTrigger className="rounded-xl border-primary/20 bg-muted/30">
+                          <SelectTrigger className="rounded-2xl h-12 border-muted bg-muted/30 focus:ring-primary">
                             <SelectValue placeholder={availablePresentations.length > 0 ? "Selecciona una fecha" : "No hay fechas disponibles"} />
                           </SelectTrigger>
-                          <SelectContent>
-                              {availablePresentations.map(p => {
-                                const venue = venues?.find(v => v.id === p.venueId);
-                                return (
-                                    <SelectItem key={p.id} value={p.id}>
-                                        {p.eventDate?.toDate().toLocaleDateString('es-NI', { weekday: 'short', month: 'short', day: 'numeric' })} - {venue?.name}
-                                    </SelectItem>
-                                )
-                              })}
+                          <SelectContent className="rounded-2xl">
+                              {availablePresentations.map(p => (
+                                <SelectItem key={p.id} value={p.id} className="rounded-xl">
+                                    {p.eventDate?.toDate().toLocaleDateString('es-NI', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                       </Select>
                   </div>
                   {selectedVenue && (
-                      <div className="flex items-start text-sm bg-primary/5 p-3 rounded-xl border border-primary/10">
-                          <MapPin className="h-4 w-4 mr-3 mt-0.5 text-primary" />
+                      <div className="flex items-start text-sm bg-primary/5 p-4 rounded-[1.5rem] border border-primary/10">
+                          <MapPin className="h-5 w-5 mr-3 text-primary shrink-0" />
                           <div>
-                            <p className="font-bold text-gray-800">{selectedVenue.name}</p>
+                            <p className="font-black text-gray-900 leading-none mb-1">{selectedVenue.name}</p>
                             <p className="text-muted-foreground text-xs">{selectedVenue.city}, Nicaragua</p>
                           </div>
                       </div>
                   )}
               </div>
 
-              <Separator />
-              
               <div className="pt-2">
-                <div className="mb-6">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Precios Disponibles</p>
+                <div className="mb-6 bg-muted/20 p-4 rounded-[1.5rem] border border-dashed text-center">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Precios oficiales</p>
                     {isLoadingPrice ? (
-                        <Skeleton className="h-10 w-2/3 rounded-lg"/>
+                        <Skeleton className="h-8 w-24 mx-auto rounded-lg"/>
                     ) : (
-                        <p className={`font-black text-3xl tracking-tight ${priceInfo ? 'text-primary' : 'text-muted-foreground text-xl'}`}>
+                        <p className={`font-black text-3xl tracking-tighter ${priceInfo ? 'text-primary' : 'text-muted-foreground text-xl'}`}>
                             {priceDisplay}
                         </p>
                     )}
                 </div>
 
-                {/* --- LÓGICA DE BOTÓN DINÁMICO --- */}
                 {isUserLoading ? (
-                    <Button disabled className="w-full h-12 rounded-full">
+                    <Button disabled className="w-full h-14 rounded-full">
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Validando sesión...
+                        Validando...
                     </Button>
                 ) : !user ? (
-                    /* CASO: USUARIO NO LOGUEADO */
                     <div className="space-y-4">
-                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start">
+                        <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex gap-3 items-start shadow-sm">
                             <LockKeyhole className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                            <p className="text-xs text-amber-800 leading-relaxed">
-                                Para garantizar una compra segura, debes <strong>iniciar sesión</strong> antes de elegir tus asientos.
+                            <p className="text-[11px] text-amber-900 font-medium leading-tight">
+                                Para garantizar una compra segura, debes <strong>iniciar sesión</strong> antes de continuar.
                             </p>
                         </div>
-                        <Button asChild className="w-full h-14 text-lg font-bold rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
-                            <Link href={`/auth?redirect=/events/${event.id}`}>
+                        <Button asChild className="w-full h-16 text-lg font-black rounded-full shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform uppercase tracking-tight">
+                            <Link href={`/auth/login?redirect=/events/${event.id}`}>
                                 Iniciar Sesión <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
                     </div>
                 ) : (
-                    /* CASO: USUARIO LOGUEADO */
                     <Button 
                       size="lg" 
-                      className="w-full h-14 text-lg font-bold rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" 
+                      className="w-full h-16 text-lg font-black rounded-full shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform uppercase tracking-tight" 
                       onClick={handlePurchase}
                       disabled={!selectedPresentation || selectedPresentation.status !== 'A la venta'}
                     >
-                      <Ticket className="mr-2 h-5 w-5" />
-                      {selectedPresentation?.status === 'A la venta' ? 'Comprar Boletos' : selectedPresentation?.status || 'No disponible'}
+                      <Ticket className="mr-2 h-6 w-6" />
+                      {selectedPresentation?.status === 'A la venta' ? 'Elegir Asientos' : 'No disponible'}
                     </Button>
                 )}
-
-                <div className="flex items-center justify-center gap-2 mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                    <span className="w-8 h-[1px] bg-muted" />
-                    🔒 Transacción Protegida
-                    <span className="w-8 h-[1px] bg-muted" />
-                </div>
               </div>
-
             </CardContent>
         </Card>
     );
 }
 
+// --- COMPONENTE PRINCIPAL ---
 export default function EventPage() {
   const firestore = useFirestore();
   const params = useParams();
@@ -192,223 +178,106 @@ export default function EventPage() {
   const [isPriceLoading, setIsPriceLoading] = useState(true);
 
   const eventRef = useMemoFirebase(() => firestore ? doc(firestore, 'events', eventId) : null, [firestore, eventId]);
-  const { data: event, isLoading: eventLoading, error: eventError } = useDoc<Event>(eventRef);
+  const { data: event, isLoading: eventLoading } = useDoc<Event>(eventRef);
 
   const presentationsQuery = useMemoFirebase(() => {
     if (!firestore || !eventId) return null;
     return query(collection(firestore, "presentations"), where("eventId", "==", eventId));
   }, [firestore, eventId]);
   
-  const { data: presentations, isLoading: presentationsLoading, error: presentationsError } = useCollection<Presentation>(presentationsQuery);
+  const { data: presentations, isLoading: presentationsLoading } = useCollection<Presentation>(presentationsQuery);
   
-  const venueIds = useMemo(() => {
-    if (!presentations) return [];
-    return [...new Set(presentations.map(p => p.venueId))];
-  }, [presentations]);
-  
+  const venueIds = useMemo(() => presentations ? [...new Set(presentations.map(p => p.venueId))] : [], [presentations]);
   const [venues, setVenues] = useState<WithId<Venue>[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
   
   useEffect(() => {
-    if (!firestore || venueIds.length === 0) {
-      setVenuesLoading(false);
-      return;
-    };
-    setVenuesLoading(true);
+    if (!firestore || venueIds.length === 0) { setVenuesLoading(false); return; }
     const fetchVenues = async () => {
         try {
-            if (venueIds.length > 0) {
-                const venuesQuery = query(collection(firestore, 'venues'), where('__name__', 'in', venueIds));
-                const venueDocs = await getDocs(venuesQuery);
-                const venuesData = venueDocs.docs.map(d => ({id: d.id, ...d.data()}) as WithId<Venue>);
-                setVenues(venuesData);
-            } else {
-                setVenues([]);
-            }
-        } catch (error) {
-            console.error("Error fetching venues:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar los detalles de los recintos.'})
-        } finally {
-            setVenuesLoading(false);
-        }
+            const venuesQuery = query(collection(firestore, 'venues'), where('__name__', 'in', venueIds));
+            const venueDocs = await getDocs(venuesQuery);
+            setVenues(venueDocs.docs.map(d => ({id: d.id, ...d.data()}) as WithId<Venue>));
+        } catch (e) { console.error(e); } finally { setVenuesLoading(false); }
     }
     fetchVenues();
-  }, [venueIds, firestore, toast]);
+  }, [venueIds, firestore]);
 
   useEffect(() => {
     const fetchPriceInfo = async () => {
-        if (!presentations || !venues || presentations.length === 0 || venues.length === 0 || !firestore) {
-            setIsPriceLoading(false);
-            return;
-        }
-
+        if (!presentations || !venues || !firestore) { setIsPriceLoading(false); return; }
         setIsPriceLoading(true);
-
-        const firstAvailablePresentation = presentations
-            .filter(p => p.status === 'A la venta')
-            .sort((a,b) => a.eventDate.toMillis() - b.eventDate.toMillis())[0];
-
-        if (!firstAvailablePresentation) {
-            setPriceInfo(null);
-            setIsPriceLoading(false);
-            return;
-        }
-
-        const venue = venues.find(v => v.id === firstAvailablePresentation.venueId);
-        if (!venue) {
-            setPriceInfo(null);
-            setIsPriceLoading(false);
-            return;
-        }
+        const first = presentations.filter(p => p.status === 'A la venta').sort((a,b) => a.eventDate.toMillis() - b.eventDate.toMillis())[0];
+        if (!first) { setIsPriceLoading(false); return; }
         
-        let prices: number[] = [];
-        let currency = 'NIO';
-
         try {
-            if (venue.type === 'general') {
-                const tiersQuery = query(collection(firestore, `presentations/${firstAvailablePresentation.id}/pricingtiers`), limit(50));
-                const tiersSnap = await getDocs(tiersQuery);
-                if (!tiersSnap.empty) {
-                    const tiers = tiersSnap.docs.map(d => d.data() as PricingTier);
-                    prices = tiers.map(t => t.price);
-                    currency = tiers[0].currency;
-                }
-            } else if (venue.type === 'numbered') {
-                const seatsQuery = query(collection(firestore, `presentations/${firstAvailablePresentation.id}/seats`), where('status', '==', 'available'), limit(50));
-                const seatsSnap = await getDocs(seatsQuery);
-                if (!seatsSnap.empty) {
-                    const seats = seatsSnap.docs.map(d => d.data() as Seat);
-                    prices = seats.map(s => s.price);
-                    currency = seats[0].currency;
-                }
+            const venue = venues.find(v => v.id === first.venueId);
+            const subCol = venue?.type === 'general' ? 'pricingtiers' : 'seats';
+            const snap = await getDocs(query(collection(firestore, `presentations/${first.id}/${subCol}`), limit(50)));
+            if (!snap.empty) {
+                const prices = snap.docs.map(d => d.data().price);
+                setPriceInfo({ minPrice: Math.min(...prices), maxPrice: Math.max(...prices), currency: snap.docs[0].data().currency || 'NIO' });
             }
-
-            if (prices.length > 0) {
-                setPriceInfo({
-                    minPrice: Math.min(...prices),
-                    maxPrice: Math.max(...prices),
-                    currency,
-                });
-            } else {
-                setPriceInfo(null);
-            }
-        } catch (error) {
-            console.error("Error fetching price info:", error);
-            setPriceInfo(null);
-        } finally {
-            setIsPriceLoading(false);
-        }
+        } catch (e) { console.error(e); } finally { setIsPriceLoading(false); }
     };
-
     fetchPriceInfo();
-}, [presentations, venues, firestore]);
+  }, [presentations, venues, firestore]);
 
-  const isLoading = eventLoading || presentationsLoading || venuesLoading;
-  const queryError = eventError || presentationsError;
-
-  const selectedPresentation = useMemo(() => {
-    if (!presentations) return null;
-    const available = presentations.filter(p => p.status === 'A la venta').sort((a,b) => a.eventDate.toMillis() - b.eventDate.toMillis());
-    return available.length > 0 ? available[0] : null;
-  }, [presentations]);
-
-  const selectedVenue = useMemo(() => {
-      if (!selectedPresentation || !venues) return null;
-      return venues.find(v => v.id === selectedPresentation.venueId) || null;
-  }, [selectedPresentation, venues]);
-
-  if (isLoading) {
-    return (
-        <div className="container py-12">
-            <div className="grid lg:grid-cols-3 gap-12">
-                <div className="lg:col-span-2 space-y-8">
-                    <Skeleton className="aspect-[16/9] w-full rounded-lg" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-10 w-3/4" />
-                        <Skeleton className="h-6 w-1/2" />
-                    </div>
-                     <Separator />
-                    <div className="space-y-4">
-                        <Skeleton className="h-8 w-1/4" />
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-5 w-3/4" />
-                    </div>
-                </div>
-                <aside className="lg:col-span-1 space-y-8 sticky top-24 self-start">
-                     <Skeleton className="h-[700px] w-full" />
-                </aside>
-            </div>
-        </div>
-    );
-  }
-
-  if (queryError) {
-      return (
-          <div className="container py-12">
-              <Card>
-                  <CardHeader><CardTitle>Ocurrió un Error</CardTitle></CardHeader>
-                  <CardContent><p className="text-destructive">No se pudieron cargar los detalles del evento.</p></CardContent>
-              </Card>
-          </div>
-      )
-  }
-
-  if (!event) {
-    notFound();
-  }
+  if (eventLoading || presentationsLoading || venuesLoading) return <div className="container py-20 text-center"><Loader2 className="animate-spin mx-auto h-12 w-12 text-primary" /></div>;
+  if (!event) notFound();
 
   const imageUrl = event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/800`;
 
   return (
-    <div className="container py-12">
-      <div className="grid lg:grid-cols-3 gap-12">
+    <div className="container max-w-7xl mx-auto px-4 py-8 md:py-16">
+      <div className="grid lg:grid-cols-3 gap-8 md:gap-16">
+        
         <div className="lg:col-span-2">
-          <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden shadow-lg mb-8 border">
-            <Image
-              src={imageUrl}
-              alt={event.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 67vw"
-              priority
-              unoptimized
-            />
-          </div>
-          <h1 className="font-headline text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
-            {event.name}
-          </h1>
-          <div className="flex gap-2 mt-3">
-             <Badge variant="secondary" className="px-3 py-1 rounded-full uppercase tracking-wider text-[10px]">{event.category}</Badge>
-             <Badge variant="outline" className="px-3 py-1 rounded-full text-[10px]">VERIFICADO</Badge>
+          {/* HEADER VISUAL: Altura optimizada para escritorio */}
+          <div className="relative aspect-[4/3] md:aspect-[16/10] lg:h-[600px] w-full rounded-[2.5rem] overflow-hidden shadow-2xl mb-10 bg-black border-4 border-white">
+            <Image src={imageUrl} alt="blur" fill className="object-cover blur-3xl opacity-40 scale-110" unoptimized />
+            <Image src={imageUrl} alt={event.name} fill className="object-contain p-4" priority unoptimized />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
           </div>
 
-          <Separator className="my-8" />
+          <div className="space-y-6">
+              <div className="flex flex-wrap gap-3">
+                 <span className="bg-primary/10 text-primary text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-primary/20">
+                    {event.category}
+                 </span>
+                 <span className="bg-green-500/10 text-green-600 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-green-500/20">
+                    Evento Verificado
+                 </span>
+              </div>
+              <h1 className="font-black text-4xl md:text-6xl text-gray-900 tracking-tighter leading-none">{event.name}</h1>
+          </div>
 
-          <div className="prose prose-lg dark:prose-invert max-w-none">
-            <h3 className="font-headline text-2xl font-bold flex items-center gap-2">
-               <Calendar className="h-6 w-6 text-primary" /> Acerca de este Evento
-            </h3>
-            <p className="text-muted-foreground leading-relaxed mt-4 whitespace-pre-wrap">{event.description || 'No hay descripción disponible para este evento.'}</p>
+          <Separator className="my-10" />
+
+          {/* DESCRIPCIÓN RESALTADA */}
+          <div className="relative">
+             <div className="flex items-center gap-3 mb-6 text-primary">
+                <Info className="h-7 w-7" />
+                <h3 className="font-black text-2xl uppercase tracking-tight">Acerca del Evento</h3>
+             </div>
+             <div className="bg-gradient-to-br from-muted/50 to-primary/5 p-8 rounded-[2rem] border border-primary/10 shadow-inner">
+                <p className="text-xl md:text-2xl font-medium text-gray-800 leading-relaxed tracking-tight whitespace-pre-wrap italic">
+                    {event.description || 'Prepárate para vivir una experiencia inolvidable.'}
+                </p>
+             </div>
           </div>
           
-           {selectedVenue?.seatMapImageUrl && (
-            <div className="mt-12">
-                <Separator className="my-8" />
-                <h3 className="font-headline text-2xl font-bold mb-4">Mapa del Recinto</h3>
-                <div className="relative aspect-video w-full rounded-2xl overflow-hidden border shadow-inner bg-muted/20">
-                    <Image 
-                        src={selectedVenue.seatMapImageUrl}
-                        alt={`Mapa de ${selectedVenue.name}`}
-                        fill
-                        className="object-contain p-4"
-                        unoptimized
-                    />
+          {/* MAPA */}
+          {venues.find(v => v.id === presentations?.[0]?.venueId)?.seatMapImageUrl && (
+            <div className="mt-16">
+                <h3 className="font-black text-2xl mb-6 flex items-center gap-2"><MapPin className="text-primary" /> Ubicaciones</h3>
+                <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden border-2 border-muted bg-white shadow-xl">
+                    <Image src={venues.find(v => v.id === presentations?.[0]?.venueId)!.seatMapImageUrl!} alt="Mapa" fill className="object-contain p-6" unoptimized />
                 </div>
             </div>
-           )}
-
+          )}
         </div>
+
         <aside className="lg:col-span-1">
           <TicketSelectionCard 
             event={{...event, id: eventId}} 
