@@ -45,40 +45,51 @@ const HeroCarousel = ({ events }: { events: CombinedEvent[] }) => {
     if (events.length === 0) return null;
 
     return (
-        <section className="relative w-full mb-12 md:mb-24">
+        <section className="relative w-full mb-12 md:mb-24 px-1 md:px-0">
             <Carousel
                 setApi={setApi}
                 plugins={[Autoplay({ delay: 6000 })]}
                 opts={{ loop: true }}
-                className="w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border-2 md:border-4 border-white dark:border-gray-800"
+                className="w-full rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden border-4 border-white dark:border-gray-900"
             >
                 <CarouselContent>
                     {events.map((event, index) => (
                         <CarouselItem key={event.id}>
-                            {/* AJUSTE RESPONSIVE CRÍTICO:
-                                - Mobile: aspect-square (Cuadrado 1:1) para ver bien la imagen sin ocupar toda la altura.
-                                - Tablet: aspect-[16/9]
-                                - Desktop: aspect-[21/9] (Panorámico)
+                            {/* CONTENEDOR DE IMAGEN CORREGIDO:
+                                Usamos un div con fondo negro y un efecto de "blur background" 
+                                para que en escritorio no se pierda información importante.
                             */}
-                            <div className="relative aspect-square sm:aspect-[16/9] md:aspect-[21/9] w-full group bg-black">
-                                {/* Imagen con efecto Zoom Lento */}
-                                <div className="absolute inset-0 overflow-hidden">
+                            <div className="relative aspect-square sm:aspect-[16/9] md:aspect-[21/9] w-full group bg-black overflow-hidden">
+                                
+                                {/* 1. IMAGEN DE FONDO (BLUR): Para rellenar los laterales en pantallas anchas */}
+                                <div className="absolute inset-0 z-0">
+                                    <Image
+                                        src={event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/800`}
+                                        alt="blur background"
+                                        fill
+                                        className="object-cover blur-3xl opacity-40 scale-125"
+                                        unoptimized
+                                    />
+                                </div>
+
+                                {/* 2. IMAGEN PRINCIPAL (CONTAIN): No se corta nunca */}
+                                <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
                                     <Image
                                         src={event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/800`}
                                         alt={event.name}
                                         fill
-                                        className="object-cover transition-transform duration-[10s] ease-in-out group-hover:scale-110 opacity-90"
+                                        // Mobile usa 'cover' porque las fotos suelen ser cuadradas/horizontales, PC usa 'contain' para no cortar caras
+                                        className="object-cover md:object-contain transition-transform duration-[10s] ease-in-out group-hover:scale-105"
                                         priority={index < 1}
                                         unoptimized
                                     />
                                 </div>
                                 
-                                {/* Overlay Gradiente Mejorado (Más oscuro abajo para leer texto) */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                                {/* 3. OVERLAY GRADIENTE (Mejora la legibilidad del texto) */}
+                                <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/30 to-transparent md:from-black/70" />
 
-                                {/* Contenido del Slide */}
-                                {/* pb-14 en móvil levanta el texto para no chocar con los dots */}
-                                <div className="absolute inset-0 flex flex-col justify-end p-6 pb-14 md:p-16 text-left max-w-7xl mx-auto w-full z-10">
+                                {/* 4. CONTENIDO DEL SLIDE */}
+                                <div className="absolute inset-0 z-30 flex flex-col justify-end p-6 pb-14 md:p-16 text-left max-w-7xl mx-auto w-full">
                                     <motion.div 
                                         initial={{ y: 30, opacity: 0 }}
                                         whileInView={{ y: 0, opacity: 1 }}
@@ -90,25 +101,25 @@ const HeroCarousel = ({ events }: { events: CombinedEvent[] }) => {
                                             Evento Destacado
                                         </div>
                                         
-                                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight drop-shadow-xl line-clamp-2">
+                                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight drop-shadow-2xl line-clamp-2">
                                             {event.name}
                                         </h1>
                                         
                                         <div className="flex flex-wrap gap-2 md:gap-4 text-gray-100 text-xs md:text-lg font-medium">
-                                            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                            <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
                                                 <MapPin className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                                                 <span className="truncate max-w-[150px] md:max-w-none">{event.venue}, {event.city}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                            <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
                                                 <CalendarDays className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                                                 <span>{event.date}</span>
                                             </div>
                                         </div>
 
                                         <div className="pt-2 md:pt-4">
-                                            <Button asChild size="lg" className="w-full sm:w-auto rounded-full px-8 text-base md:text-lg font-bold shadow-lg bg-primary hover:bg-primary/90 text-white hover:scale-105 transition-transform">
+                                            <Button asChild size="lg" className="w-full sm:w-auto rounded-full px-10 h-14 md:h-16 text-lg font-bold shadow-2xl bg-primary hover:bg-primary/90 text-white hover:scale-105 transition-transform border-b-4 border-primary-dark">
                                                 <Link href={`/events/${event.id}`}>
-                                                    Boletos <ArrowRight className="ml-2 w-5 h-5" />
+                                                    Comprar Boletos <ArrowRight className="ml-2 w-6 h-6" />
                                                 </Link>
                                             </Button>
                                         </div>
@@ -119,13 +130,13 @@ const HeroCarousel = ({ events }: { events: CombinedEvent[] }) => {
                     ))}
                 </CarouselContent>
                 
-                {/* Navegación Dots (Centrada abajo) */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20 bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                {/* Navegación Dots */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2.5 z-40 bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/5">
                     {events.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => api?.scrollTo(index)}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${current === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white'}`}
+                            className={`h-2 rounded-full transition-all duration-300 ${current === index ? 'w-8 bg-primary shadow-lg shadow-primary/50' : 'w-2 bg-white/40 hover:bg-white/70'}`}
                             aria-label={`Ir a slide ${index + 1}`}
                         />
                     ))}
@@ -149,17 +160,17 @@ const CategorySelector = ({ onSelect }: { onSelect: (category: string) => void }
         {categories.map((category) => (
             <motion.div
                 key={category.name}
-                whileHover={{ y: -5 }}
+                whileHover={{ y: -8 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onSelect(category.name)}
-                className="group cursor-pointer relative overflow-hidden rounded-2xl shadow-md border border-muted/50 bg-card hover:shadow-xl transition-all duration-300"
+                className="group cursor-pointer relative overflow-hidden rounded-3xl shadow-lg border border-muted/50 bg-card hover:shadow-2xl transition-all duration-300"
             >
-                <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-10 group-hover:opacity-100 transition-opacity duration-300`} />
-                <div className="relative p-4 md:p-6 flex flex-col items-center text-center gap-3 min-h-[120px] md:min-h-[140px] justify-center">
-                    <div className="p-3 rounded-full bg-background/80 shadow-sm group-hover:bg-white/20 group-hover:text-white transition-colors">
-                        <category.icon className="w-6 h-6 md:w-8 md:h-8 text-primary group-hover:text-white" />
+                <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-5 group-hover:opacity-100 transition-opacity duration-300`} />
+                <div className="relative p-5 md:p-8 flex flex-col items-center text-center gap-4 min-h-[140px] md:min-h-[160px] justify-center">
+                    <div className="p-4 rounded-2xl bg-background/80 shadow-md group-hover:bg-white/20 group-hover:text-white transition-all group-hover:rotate-6">
+                        <category.icon className="w-7 h-7 md:w-9 md:h-9 text-primary group-hover:text-white" />
                     </div>
-                    <h3 className="font-bold text-xs md:text-sm group-hover:text-white transition-colors line-clamp-2 leading-tight">
+                    <h3 className="font-extrabold text-xs md:text-sm group-hover:text-white transition-colors line-clamp-2 leading-tight uppercase tracking-tight">
                         {category.name}
                     </h3>
                 </div>
@@ -174,10 +185,8 @@ function PageContent() {
     const router = useRouter();
     const { setEvents } = useContext(EventContext);
 
-    // --- Estados ---
     const [combinedEvents, setCombinedEvents] = useState<CombinedEvent[]>([]);
 
-    // Hooks de Firebase
     const eventsQuery = useMemoFirebase(() => query(collection(firestore, "events")), [firestore]);
     const presentationsQuery = useMemoFirebase(() => query(collection(firestore, "presentations")), [firestore]);
     const venuesQuery = useMemoFirebase(() => query(collection(firestore, "venues")), [firestore]);
@@ -237,15 +246,12 @@ function PageContent() {
 
     }, [eventsData, presentationsData, venuesData, isLoading, setEvents]);
 
-
     const heroEvents = combinedEvents.slice(0, 5);
 
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <div className="relative">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                </div>
+                <Loader2 className="w-12 h-12 text-primary animate-spin" />
                 <p className="text-lg font-medium text-muted-foreground animate-pulse">Cargando experiencias...</p>
             </div>
         );
@@ -253,15 +259,12 @@ function PageContent() {
 
     return (
         <main className="min-h-screen relative overflow-hidden flex flex-col">
-            {/* Background Decorations */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 bg-background">
-                <div className="absolute top-0 right-0 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/5 rounded-full blur-[80px] md:blur-[100px]" />
-                <div className="absolute bottom-0 left-0 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-500/5 rounded-full blur-[80px] md:blur-[100px]" />
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
+                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px]" />
             </div>
 
-            {/* CONTENEDOR CENTRAL: max-w-7xl + mx-auto centra todo el contenido */}
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12 flex-1">
-                
                 <HeroCarousel events={heroEvents} />
                 
                 <motion.section 
@@ -270,50 +273,37 @@ function PageContent() {
                     viewport={{ once: true }}
                     className="mb-16 md:mb-24"
                 >
-                    <div className="text-center mb-8 md:mb-12 max-w-3xl mx-auto">
-                        <h2 className="font-headline text-3xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600 mb-4">
+                    <div className="text-center mb-8 md:mb-16 max-w-3xl mx-auto">
+                        <h2 className="font-headline text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600 mb-6 tracking-tight">
                             Explora tu Pasión
                         </h2>
-                        <p className="text-muted-foreground text-base md:text-lg">
-                            Encuentra los eventos que te mueven, desde música en vivo hasta teatro.
+                        <p className="text-muted-foreground text-lg md:text-xl font-medium px-4">
+                            Encuentra los eventos que te mueven en Nicaragua, desde conciertos inolvidables hasta ferias locales.
                         </p>
                     </div>
                     
-                    {/* Centramos el selector de categorías */}
-                    <div className="w-full">
-                        <CategorySelector onSelect={handleCategorySelect} />
-                    </div>
+                    <CategorySelector onSelect={handleCategorySelect} />
                 </motion.section>
                 
-                <div className="text-center mb-20 md:mb-32">
-                    <Button size="lg" asChild className="rounded-full px-10 py-6 text-base md:text-lg font-semibold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all">
-                        <Link href="/events">Ver Todos los Eventos</Link>
+                <div className="text-center mb-24 md:mb-36">
+                    <Button size="lg" asChild className="rounded-full px-12 h-16 md:h-20 text-xl font-black shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 transition-all">
+                        <Link href="/events">Descubrir Más <ArrowRight className="ml-3 w-7 h-7" /></Link>
                     </Button>
                 </div>
                 
-                <div className="space-y-20 md:space-y-32">
-                    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                        <AboutSection />
-                    </motion.div>
-
-                    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                        <WhyUsSection />
-                    </motion.div>
-
-                    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                        <SponsorCarousel />
-                    </motion.div>
+                <div className="space-y-24 md:space-y-40 mb-20">
+                    <AboutSection />
+                    <WhyUsSection />
+                    <SponsorCarousel />
                 </div>
-
             </div>
         </main>
     );
 }
 
-// --- Componente Principal ---
 export default function MainPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
             <PageContent />
         </Suspense>
     )

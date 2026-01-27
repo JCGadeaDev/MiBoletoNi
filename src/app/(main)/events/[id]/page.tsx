@@ -1,26 +1,25 @@
-
 'use client';
 import Image from 'next/image';
 import { notFound, useParams, useRouter } from 'next/navigation';
-import { Calendar, MapPin, Ticket } from 'lucide-react';
+import { Calendar, MapPin, Ticket, LockKeyhole, ArrowRight, Loader2 } from 'lucide-react'; // Añadidos iconos
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase'; // Añadido useUser
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Event, Presentation, PricingTier, Seat, Venue, WithId } from '@/lib/types';
 import { useState, useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 type PriceInfo = {
     minPrice: number;
     maxPrice: number;
     currency: string;
 } | null;
-
 
 function TicketSelectionCard({ 
     event, 
@@ -37,6 +36,7 @@ function TicketSelectionCard({
 }) {
     const router = useRouter();
     const { toast } = useToast();
+    const { user, isUserLoading } = useUser(); // Obtenemos el estado del usuario
     
     const availablePresentations = useMemo(() => 
         presentations?.filter(p => p.status === 'A la venta').sort((a,b) => a.eventDate.toMillis() - b.eventDate.toMillis()) || [], 
@@ -60,7 +60,6 @@ function TicketSelectionCard({
         return venues?.find(v => v.id === selectedPresentation.venueId);
     }, [selectedPresentation, venues]);
 
-
     const handlePurchase = () => {
         if (!selectedPresentationId) {
           toast({ variant: 'destructive', title: 'Selección Incompleta', description: 'Por favor, elige una presentación.'});
@@ -80,20 +79,24 @@ function TicketSelectionCard({
     }, [priceInfo]);
 
     return (
-        <Card className="shadow-lg sticky top-24 self-start">
+        <Card className="shadow-lg sticky top-24 self-start border-primary/10 overflow-hidden">
+            {/* Línea decorativa superior */}
+            <div className="h-1.5 bg-primary w-full" />
+            
             <CardHeader>
               <CardTitle className="font-headline text-2xl">Compra tus Boletos</CardTitle>
+              <CardDescription>Reserva tu lugar en este evento.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                   <div>
-                      <label className="font-semibold text-foreground">Elige la Presentación</label>
+                      <label className="font-semibold text-sm text-foreground mb-1.5 block">1. Elige la Presentación</label>
                       <Select 
                           value={selectedPresentationId || ''} 
                           onValueChange={setSelectedPresentationId}
                           disabled={availablePresentations.length === 0}
                       >
-                          <SelectTrigger>
+                          <SelectTrigger className="rounded-xl border-primary/20 bg-muted/30">
                             <SelectValue placeholder={availablePresentations.length > 0 ? "Selecciona una fecha" : "No hay fechas disponibles"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -101,7 +104,7 @@ function TicketSelectionCard({
                                 const venue = venues?.find(v => v.id === p.venueId);
                                 return (
                                     <SelectItem key={p.id} value={p.id}>
-                                        {p.eventDate?.toDate().toLocaleDateString('es-NI', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {venue?.name}
+                                        {p.eventDate?.toDate().toLocaleDateString('es-NI', { weekday: 'short', month: 'short', day: 'numeric' })} - {venue?.name}
                                     </SelectItem>
                                 )
                               })}
@@ -109,11 +112,11 @@ function TicketSelectionCard({
                       </Select>
                   </div>
                   {selectedVenue && (
-                      <div className="flex items-start text-sm">
-                          <MapPin className="h-4 w-4 mr-3 mt-1 text-primary" />
+                      <div className="flex items-start text-sm bg-primary/5 p-3 rounded-xl border border-primary/10">
+                          <MapPin className="h-4 w-4 mr-3 mt-0.5 text-primary" />
                           <div>
-                            <p className="font-semibold">{selectedVenue.name}</p>
-                            <p className="text-muted-foreground">{selectedVenue.city}</p>
+                            <p className="font-bold text-gray-800">{selectedVenue.name}</p>
+                            <p className="text-muted-foreground text-xs">{selectedVenue.city}, Nicaragua</p>
                           </div>
                       </div>
                   )}
@@ -121,28 +124,57 @@ function TicketSelectionCard({
 
               <Separator />
               
-              <div className="border-t pt-6 mt-6">
-                <div className="mb-4">
-                    <p className="text-sm text-muted-foreground">Precios</p>
+              <div className="pt-2">
+                <div className="mb-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Precios Disponibles</p>
                     {isLoadingPrice ? (
-                        <Skeleton className="h-8 w-1/2"/>
+                        <Skeleton className="h-10 w-2/3 rounded-lg"/>
                     ) : (
-                        <p className={`font-bold text-3xl ${priceInfo ? 'text-primary' : ''}`}>{priceDisplay}</p>
+                        <p className={`font-black text-3xl tracking-tight ${priceInfo ? 'text-primary' : 'text-muted-foreground text-xl'}`}>
+                            {priceDisplay}
+                        </p>
                     )}
                 </div>
 
-                <Button 
-                  size="lg" 
-                  className="w-full" 
-                  onClick={handlePurchase}
-                  disabled={!selectedPresentation || selectedPresentation.status !== 'A la venta'}
-                >
-                  <Ticket className="mr-2 h-5 w-5" />
-                  {selectedPresentation?.status === 'A la venta' ? 'Comprar Boletos' : selectedPresentation?.status || 'No disponible'}
-                </Button>
-                <p className="text-center text-xs text-muted-foreground mt-2">
-                  🔒 Pago 100% Seguro
-                </p>
+                {/* --- LÓGICA DE BOTÓN DINÁMICO --- */}
+                {isUserLoading ? (
+                    <Button disabled className="w-full h-12 rounded-full">
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Validando sesión...
+                    </Button>
+                ) : !user ? (
+                    /* CASO: USUARIO NO LOGUEADO */
+                    <div className="space-y-4">
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 items-start">
+                            <LockKeyhole className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                            <p className="text-xs text-amber-800 leading-relaxed">
+                                Para garantizar una compra segura, debes <strong>iniciar sesión</strong> antes de elegir tus asientos.
+                            </p>
+                        </div>
+                        <Button asChild className="w-full h-14 text-lg font-bold rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+                            <Link href={`/auth?redirect=/events/${event.id}`}>
+                                Iniciar Sesión <ArrowRight className="ml-2 h-5 w-5" />
+                            </Link>
+                        </Button>
+                    </div>
+                ) : (
+                    /* CASO: USUARIO LOGUEADO */
+                    <Button 
+                      size="lg" 
+                      className="w-full h-14 text-lg font-bold rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" 
+                      onClick={handlePurchase}
+                      disabled={!selectedPresentation || selectedPresentation.status !== 'A la venta'}
+                    >
+                      <Ticket className="mr-2 h-5 w-5" />
+                      {selectedPresentation?.status === 'A la venta' ? 'Comprar Boletos' : selectedPresentation?.status || 'No disponible'}
+                    </Button>
+                )}
+
+                <div className="flex items-center justify-center gap-2 mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                    <span className="w-8 h-[1px] bg-muted" />
+                    🔒 Transacción Protegida
+                    <span className="w-8 h-[1px] bg-muted" />
+                </div>
               </div>
 
             </CardContent>
@@ -316,7 +348,7 @@ export default function EventPage() {
           <div className="container py-12">
               <Card>
                   <CardHeader><CardTitle>Ocurrió un Error</CardTitle></CardHeader>
-                  <CardContent><p className="text-destructive">No se pudieron cargar los detalles del evento. Por favor, revisa que tus reglas de seguridad de Firestore permitan la lectura pública de las colecciones 'events', 'presentations' y 'venues'.</p></CardContent>
+                  <CardContent><p className="text-destructive">No se pudieron cargar los detalles del evento.</p></CardContent>
               </Card>
           </div>
       )
@@ -327,48 +359,49 @@ export default function EventPage() {
   }
 
   const imageUrl = event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/800`;
-  const imageHint = "event photo";
 
   return (
     <div className="container py-12">
       <div className="grid lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2">
-          <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden shadow-lg mb-8">
+          <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden shadow-lg mb-8 border">
             <Image
               src={imageUrl}
               alt={event.name}
               fill
               className="object-cover"
-              data-ai-hint={imageHint}
               sizes="(max-width: 1024px) 100vw, 67vw"
               priority
               unoptimized
             />
           </div>
-          <h1 className="font-headline text-3xl md:text-4xl font-bold">
+          <h1 className="font-headline text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
             {event.name}
           </h1>
-          <p className="text-lg text-muted-foreground mt-2">
-            {event.category}
-          </p>
+          <div className="flex gap-2 mt-3">
+             <Badge variant="secondary" className="px-3 py-1 rounded-full uppercase tracking-wider text-[10px]">{event.category}</Badge>
+             <Badge variant="outline" className="px-3 py-1 rounded-full text-[10px]">VERIFICADO</Badge>
+          </div>
 
           <Separator className="my-8" />
 
           <div className="prose prose-lg dark:prose-invert max-w-none">
-            <h3 className="font-headline text-2xl">Acerca de este Evento</h3>
-            <p className="text-justify">{event.description || 'No hay descripción disponible para este evento.'}</p>
+            <h3 className="font-headline text-2xl font-bold flex items-center gap-2">
+               <Calendar className="h-6 w-6 text-primary" /> Acerca de este Evento
+            </h3>
+            <p className="text-muted-foreground leading-relaxed mt-4 whitespace-pre-wrap">{event.description || 'No hay descripción disponible para este evento.'}</p>
           </div>
           
            {selectedVenue?.seatMapImageUrl && (
             <div className="mt-12">
                 <Separator className="my-8" />
-                <h3 className="font-headline text-2xl mb-4">Mapa del Recinto</h3>
-                <div className="relative aspect-video w-full rounded-lg overflow-hidden border bg-muted">
+                <h3 className="font-headline text-2xl font-bold mb-4">Mapa del Recinto</h3>
+                <div className="relative aspect-video w-full rounded-2xl overflow-hidden border shadow-inner bg-muted/20">
                     <Image 
                         src={selectedVenue.seatMapImageUrl}
                         alt={`Mapa de ${selectedVenue.name}`}
                         fill
-                        className="object-contain"
+                        className="object-contain p-4"
                         unoptimized
                     />
                 </div>
@@ -376,7 +409,7 @@ export default function EventPage() {
            )}
 
         </div>
-        <aside className="lg:col-span-1 space-y-8">
+        <aside className="lg:col-span-1">
           <TicketSelectionCard 
             event={{...event, id: eventId}} 
             presentations={presentations} 
@@ -389,5 +422,3 @@ export default function EventPage() {
     </div>
   );
 }
-
-    
