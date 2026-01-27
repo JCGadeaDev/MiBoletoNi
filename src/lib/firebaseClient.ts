@@ -1,10 +1,8 @@
-'use client';
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
-import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'; // Add Config
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,15 +13,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Inicializa Firebase solo una vez.
-// --- CAMBIO AQUÍ ---
-// Solo inicializamos con la config real si tenemos la API Key (estamos en runtime)
-// Si no, inicializamos con una config vacía para que el Build no explote.
 let app: FirebaseApp;
 
 if (!getApps().length) {
   if (!firebaseConfig.apiKey && process.env.NODE_ENV === 'production') {
-    // Estamos en fase de Build en la nube
     app = initializeApp({ apiKey: "build-placeholder", projectId: "build-placeholder" });
   } else {
     app = initializeApp(firebaseConfig);
@@ -31,20 +24,22 @@ if (!getApps().length) {
 } else {
   app = getApp();
 }
-// --- FIN DEL CAMBIO ---
 
 const auth = getAuth(app);
 const firestore = getFirestore(app);
+const db = firestore; // Alias estándar para el servidor
 const storage = getStorage(app);
-const functions = getFunctions(app, "us-central1"); // Initialize functions
+const functions = getFunctions(app, "us-central1");
 
-// Connect to emulators if in development
 if (process.env.NODE_ENV === 'development') {
-  console.log("🔥 Connecting to Firebase Emulators...");
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFirestoreEmulator(firestore, "localhost", 8080);
-  connectFunctionsEmulator(functions, "localhost", 5001);
-  connectStorageEmulator(storage, "localhost", 9199); // If storage emulator is enabled
+  // Solo intentamos conectar emuladores si estamos en el cliente (browser)
+  if (typeof window !== 'undefined') {
+    console.log("🔥 Connecting to Firebase Emulators...");
+    connectAuthEmulator(auth, "http://localhost:9099");
+    connectFirestoreEmulator(firestore, "localhost", 8080);
+    connectFunctionsEmulator(functions, "localhost", 5001);
+    connectStorageEmulator(storage, "localhost", 9199);
+  }
 }
 
-export { app as firebaseApp, auth, firestore, storage, functions };
+export { app as firebaseApp, auth, firestore, db, storage, functions };
