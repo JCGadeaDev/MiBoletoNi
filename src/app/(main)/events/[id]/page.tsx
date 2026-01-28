@@ -223,33 +223,55 @@ export default function EventPage() {
     fetchPriceInfo();
   }, [presentations, venues, firestore]);
 
-  // Lógica para el Script de Google (SEO)
+  // --- CORRECCIÓN SEO: JSON-LD COMPLETO PARA GOOGLE ---
   const jsonLd = useMemo(() => {
     if (!event || !presentations?.[0]) return null;
+    
     const firstP = presentations[0];
     const venue = venues.find(v => v.id === firstP.venueId);
+    
+    // Calcular fecha de fin estimada (3 horas después) para evitar advertencias de Google
+    const startDate = firstP.eventDate?.toDate();
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + 3);
+
     return {
       '@context': 'https://schema.org',
       '@type': 'Event',
       name: event.name,
       description: event.description,
-      image: event.imageUrl,
-      startDate: firstP.eventDate?.toDate().toISOString(),
+      image: [event.imageUrl], // Google prefiere Array
+      eventStatus: 'https://schema.org/EventScheduled', // Estado requerido
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', // Modo requerido
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(), // Campo requerido que faltaba
       location: {
         '@type': 'Place',
-        name: venue?.name,
+        name: venue?.name || 'Lugar por confirmar', // Fallback
         address: {
           '@type': 'PostalAddress',
-          addressLocality: venue?.city,
+          streetAddress: venue?.address || '',
+          addressLocality: venue?.city || 'Managua',
+          addressRegion: 'Managua',
           addressCountry: 'NI',
         },
       },
+      performer: { // Campo requerido que faltaba
+        '@type': 'PerformingGroup',
+        name: event.name
+      },
+      organizer: { // Campo requerido que faltaba
+        '@type': 'Organization',
+        name: 'MiBoletoNi',
+        url: 'https://miboletoni.com'
+      },
       offers: {
         '@type': 'Offer',
-        price: priceInfo?.minPrice,
+        price: priceInfo?.minPrice || '0', // Fallback para evitar vacío
         priceCurrency: priceInfo?.currency || 'NIO',
         availability: 'https://schema.org/InStock',
-        url: `https://miboletoni.com/events/${eventId}`
+        url: `https://miboletoni.com/events/${eventId}`,
+        validFrom: new Date().toISOString()
       }
     };
   }, [event, presentations, venues, priceInfo, eventId]);
@@ -269,7 +291,7 @@ export default function EventPage() {
       <div className="grid lg:grid-cols-3 gap-8 md:gap-16">
         
         <div className="lg:col-span-2">
-          {/* HEADER VISUAL: Altura de 600px en Desktop para impacto total */}
+          {/* HEADER VISUAL: Altura de 600px en Desktop */}
           <div className="relative aspect-[4/3] md:aspect-[16/10] lg:h-[600px] w-full rounded-[2.5rem] overflow-hidden shadow-2xl mb-10 bg-black border-4 border-white">
             <Image src={imageUrl} alt="blur" fill className="object-cover blur-3xl opacity-40 scale-110" unoptimized />
             <Image src={imageUrl} alt={event.name} fill className="object-contain p-4" priority unoptimized />
@@ -290,14 +312,13 @@ export default function EventPage() {
 
           <Separator className="my-10" />
 
-          {/* DESCRIPCIÓN ULTRA RESALTADA PARA CONVERSIÓN */}
+          {/* DESCRIPCIÓN ULTRA RESALTADA */}
           <div className="relative group mb-12">
              <div className="flex items-center gap-3 mb-8 text-primary">
                 <Sparkles className="h-8 w-8 animate-pulse" />
                 <h3 className="font-black text-2xl md:text-3xl uppercase tracking-tighter text-gray-900">Sobre la Experiencia</h3>
              </div>
              <div className="bg-gradient-to-br from-white to-primary/[0.04] p-8 md:p-14 rounded-[3.5rem] border border-primary/10 shadow-2xl relative overflow-hidden">
-                {/* Comilla decorativa gigante de fondo */}
                 <span className="absolute -top-10 -right-4 text-[15rem] font-black text-primary/5 select-none pointer-events-none">"</span>
                 
                 <p className="text-xl md:text-4xl font-bold text-gray-800 leading-[1.1] tracking-tighter whitespace-pre-wrap relative z-10 italic">
