@@ -37,8 +37,8 @@ const faqs = [
         icon: Ticket,
         questions: [
             { q: "No he recibido mis boletos por correo", a: "Primero, revisa tu carpeta de Correo No Deseado o SPAM. Si no los encuentras, puedes iniciar sesión en tu cuenta en MiBoletoNi y descargarlos directamente desde la sección 'Mis Boletos'." },
-            { q: "¿Debo imprimir mi boleto?", a: "No es estrictamente necesario. Puedes presentar el código QR desde tu celular al llegar al evento. Solo asegúrate de tener buen brillo en la pantalla para facilitar el escaneo." },
-            { q: "¿Puedo transferir mi boleto a otra persona?", a: "Sí, los boletos digitales son transferibles. Sin embargo, recuerda que cada código QR es único y solo puede ser escaneado una vez en la entrada." }
+            { q: "¿Debo imprimir mi boleto?", a: "Sí. Una vez que recibas tus boletos electrónicos, encontrarás un número de orden. Con ese número, debes acudir a un punto de venta autorizado para canjearlo y recibir tus boletos físicos." },
+            { q: "Compré varios boletos, ¿tenemos que entrar todos juntos?", a: "No es necesario. Cada boleto cuenta con su propio código de barras, por lo que una vez que los retires en físico, cada persona podrá ingresar de forma individual con su boleto." }
         ]
     },
     {
@@ -53,7 +53,8 @@ const faqs = [
         category: "Cambios y Devoluciones",
         icon: Undo2,
         questions: [
-            { q: "¿Qué pasa si un evento se cancela?", a: "En caso de cancelación oficial, MiBoletoNi notificará a todos los compradores y gestionará el reembolso total del valor del boleto según las políticas establecidas para dicho evento." },
+            { q: "¿Qué pasa si un evento se cancela?", a: "Si un evento es cancelado, el organizador es responsable de la política de reembolso. MiBoletoNi seguirá las instrucciones del organizador y te notificaremos por correo electrónico sobre los pasos a seguir para solicitar la devolución de tu dinero." },
+            { q: "¿Qué pasa si un evento se pospone?", a: "Si el evento se pospone, no se realizarán devoluciones, ya que el evento sigue en pie y tus boletos actuales serán válidos para la nueva fecha. En caso de que el cliente no pueda asistir a la reprogramación, deberá gestionar la reventa o transferencia de sus boletos por cuenta propia, ya que ni MiBoletoNi, ni el organizador realizarán reembolsos en estos casos" },
             { q: "¿Puedo pedir un reembolso si no puedo asistir?", a: "Lamentablemente, como política general de boletería, no se realizan cambios ni devoluciones si el evento se lleva a cabo según lo programado, a menos que el organizador indique lo contrario." }
         ]
     }
